@@ -90,6 +90,16 @@
         showError("ข้อมูล Callback ไม่ครบหรือไม่ถูกต้อง กรุณากลับไปเริ่มเข้าสู่ระบบใหม่");
         return;
       }
+      // ตรวจสอบ state ที่เก็บไว้ในเบราว์เซอร์ก่อนออกจากเว็บไซต์
+const expectedState = sessionStorage.getItem("finora_line_state");
+
+if (!expectedState || state !== expectedState) {
+  showError("คำขอเข้าสู่ระบบไม่ตรงกัน กรุณาเริ่มเข้าสู่ระบบใหม่");
+  return;
+}
+
+// ใช้ state ได้ครั้งเดียว
+sessionStorage.removeItem("finora_line_state");
 
       heading.textContent = "กำลังยืนยันตัวตนกับ LINE";
       message.textContent = "ระบบกำลังส่งคำขอไปตรวจสอบอย่างปลอดภัย";
