@@ -709,8 +709,22 @@ function dispatchFinoraEvent(name, detail = {}) {
         })
     );
 }
+function withTimeout(promise, timeoutMs, message) {
+    let timerId;
 
+    const timeoutPromise = new Promise((_, reject) => {
+        timerId = window.setTimeout(() => {
+            reject(new Error(message));
+        }, timeoutMs);
+    });
 
+    return Promise.race([
+        Promise.resolve(promise),
+        timeoutPromise
+    ]).finally(() => {
+        window.clearTimeout(timerId);
+    });
+}
 /* ============================================================================
    7. AUTHENTICATION AND SESSION MANAGEMENT
    ============================================================================ */
@@ -722,8 +736,11 @@ function dispatchFinoraEvent(name, detail = {}) {
  * use getCurrentUser(), which calls Supabase Auth.
  */
 async function getSession() {
-    const { data, error } = await supabase.auth.getSession();
-
+    const { data, error } = await withTimeout(
+    supabase.auth.getSession(),
+    10000,
+    "ตรวจสอบสถานะเซสชันใช้เวลานานเกินไป"
+);
     if (error) {
         throw error;
     }
@@ -738,7 +755,11 @@ async function getSession() {
  * Return the authenticated user verified by Supabase Auth.
  */
 async function getCurrentUser() {
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = await withTimeout(
+    supabase.auth.getUser(),
+    10000,
+    "ตรวจสอบบัญชีผู้ใช้ใช้เวลานานเกินไป"
+);
 
     if (error) {
         throw error;
@@ -2734,9 +2755,20 @@ async function initializeFinora() {
             FINORA_STATE.user = session?.user ?? null;
 
             if (session?.user) {
-                await refreshProfile();
-            } else {
-                FINORA_STATE.profile = null;
+    await withTimeout(
+        refreshProfile(),
+        8000,
+        "โหลดข้อมูลโปรไฟล์ใช้เวลานานเกินไป"
+    ).catch((error) => {
+        console.warn(
+            "FINORA profile loading timeout:",
+            error
+        );
+
+        FINORA_STATE.profile = null;
+    });
+} else {
+    FINORA_STATE.profile = null;
             }
 
             refreshAuthUI();
