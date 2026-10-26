@@ -6605,7 +6605,18 @@ FINORA — ฉบับร่างสำหรับการตรวจสอ
               );
             }
           }
+          /*
+ * FINORA: Preserve the signup view after LINE verification.
+ * If a LINE signup code exists, keep the signup page open
+ * instead of falling through to the login page.
+ */
+const pendingLineSignupCode =
+  FINORA.line.getPendingSignupCode();
 
+if (pendingLineSignupCode) {
+  navigateAuth("signup");
+  return;
+}
           /*
            * When returning from LINE, the API module may have already
            * stored a real session token during its OAuth callback.
