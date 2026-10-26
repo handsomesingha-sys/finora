@@ -3322,7 +3322,16 @@ FINORA เป็นระบบออนไลน์สำหรับจัด�
                     throw new Error("ยังโหลด index.js ไม่สำเร็จ กรุณาตรวจสอบชื่อไฟล์และเส้นทาง");
                 }
 
-                await FINORA.initialize();
+                await Promise.race([
+    FINORA.initialize(),
+    new Promise((_, reject) => {
+        window.setTimeout(() => {
+            reject(new Error(
+                "ระบบใช้เวลาเชื่อมต่อนานเกินไป กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่"
+            ));
+        }, 12000);
+    })
+]);
 
                 /*
                  * Supabase's current index.js uses persistent session storage.
