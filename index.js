@@ -4070,3 +4070,83 @@
   }
 
 })(window, document);
+
+/**
+ * FINORA: เริ่ม LINE Login
+ *
+ * เรียก Apps Script เพื่อรับ URL เข้าสู่ระบบ
+ * ไม่มี Channel Secret อยู่ใน frontend
+ */
+function startFinoraLineLogin() {
+  const gasUrl =
+    "https://script.google.com/macros/s/AKfycbwWEJQPg0aOWSUMSiMVi2d-LQ9Z7wGh12lnA3G61W-Q-kmJPUb5E-MxPmuLH05V4MGL5g/exec";
+
+  window.finoraLineLoginCallback = function (loginUrl) {
+    try {
+      // รองรับข้อความ error ที่ส่งจาก Apps Script
+      if (loginUrl && typeof loginUrl === "object" && loginUrl.error) {
+        throw new Error(loginUrl.error);
+      }
+
+      const url = new URL(loginUrl);
+
+      // ป้องกันการ redirect ไปยังโดเมนที่ไม่ใช่ LINE
+      if (
+        url.origin !== "https://access.line.me" ||
+        url.pathname !== "/oauth2/v2.1/authorize"
+      ) {
+        throw new Error("Invalid LINE authorization URL");
+      }
+
+      const state = url.searchParams.get("state");
+
+      if (!state) {
+        throw new Error("Missing LINE state");
+      }
+
+      // บันทึก state ไว้ใน session ของ GitHub Pages
+      sessionStorage.setItem("finora_line_state", state);
+
+      // พาผู้ใช้ไป LINE Login
+      window.location.assign(url.toString());
+
+    } catch (error) {
+      console.error("FINORA LINE Login:", error);
+
+      const errorElement = document.getElementById("lineLoginError");
+
+      if (errorElement) {
+        errorElement.textContent =
+          "ไม่สามารถเริ่มเข้าสู่ระบบด้วย LINE ได้ กรุณาลองใหม่";
+      }
+    };
+  };
+
+  // ป้องกันการเพิ่ม script ซ้ำจากการกดหลายครั้ง
+  const previousScript = document.getElementById("finora-line-start");
+  if (previousScript) {
+    previousScript.remove();
+  }
+
+  const script = document.createElement("script");
+  script.id = "finora-line-start";
+
+  script.src =
+    gasUrl +
+    "?action=lineStart" +
+    "&callback=finoraLineLoginCallback" +
+    "&_=" + Date.now();
+
+  script.onerror = function () {
+    console.error("ไม่สามารถเรียก FINORA LINE Login API ได้");
+
+    const errorElement = document.getElementById("lineLoginError");
+
+    if (errorElement) {
+      errorElement.textContent =
+        "เชื่อมต่อระบบเข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่";
+    }
+  };
+
+  document.head.appendChild(script);
+}
