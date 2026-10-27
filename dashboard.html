@@ -1,1 +1,5508 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101B48">
+  <meta name="description" content="FINORA Administration Portal">
+  <title>FINORA — Administration Portal</title>
 
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+  <style>
+    :root {
+      --navy: #101B48;
+      --navy-light: #1B2D65;
+      --teal: #19B89A;
+      --teal-dark: #087E68;
+      --text: #202944;
+      --muted: #778096;
+      --border: #E4E8F0;
+      --background: #F4F6FA;
+      --white: #FFFFFF;
+      --red: #D94452;
+      --green: #0F9F77;
+      --amber: #B7791F;
+      --blue: #315DB8;
+      --purple: #7955B8;
+      --shadow: 0 16px 45px rgba(16, 27, 72, .08);
+      --radius: 16px;
+      --font: "Prompt", "Inter", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .55;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .small {
+      font-size: 11px;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .text-danger {
+      color: var(--red);
+    }
+
+    .text-success {
+      color: var(--green);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      text-decoration: none;
+      color: var(--navy);
+    }
+
+    .brand-mark {
+      width: 43px;
+      height: 43px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      background: var(--navy);
+      color: white;
+      font-size: 25px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .brand-name {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: .5px;
+      line-height: 1.3;
+    }
+
+    .brand-subtitle {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1.15px;
+      line-height: 1.4;
+    }
+
+    /* =====================================================
+       LOADER: FOUR COLOURED DOTS
+       ===================================================== */
+
+    .global-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 20000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(244, 245, 247, .97);
+    }
+
+    .loader-dots {
+      position: relative;
+      width: 112px;
+      height: 112px;
+    }
+
+    .loader-dot {
+      position: absolute;
+      border-radius: 50%;
+      animation: dotPulse 1.15s ease-in-out infinite;
+    }
+
+    .loader-dot.blue {
+      width: 48px;
+      height: 48px;
+      left: 0;
+      top: 0;
+      background: #03A9F4;
+    }
+
+    .loader-dot.red {
+      width: 36px;
+      height: 36px;
+      right: 14px;
+      top: 5px;
+      background: #FF5D66;
+      animation-delay: .12s;
+    }
+
+    .loader-dot.purple {
+      width: 28px;
+      height: 28px;
+      left: 11px;
+      bottom: 13px;
+      background: #D05FF1;
+      animation-delay: .24s;
+    }
+
+    .loader-dot.green {
+      width: 59px;
+      height: 59px;
+      right: 2px;
+      bottom: 0;
+      background: #93CF22;
+      animation-delay: .36s;
+    }
+
+    @keyframes dotPulse {
+      0%, 100% {
+        transform: scale(.94);
+      }
+
+      50% {
+        transform: scale(1.08);
+      }
+    }
+
+    .loader-message {
+      margin-top: 23px;
+      max-width: 85vw;
+      text-align: center;
+      color: #4F5666;
+      font-size: 14px;
+    }
+
+    /* =====================================================
+       BUTTONS
+       ===================================================== */
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 9px 15px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background .16s ease, transform .16s ease;
+    }
+
+    .btn:active {
+      transform: scale(.985);
+    }
+
+    .btn-primary {
+      background: var(--navy);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--navy-light);
+    }
+
+    .btn-teal {
+      background: var(--teal-dark);
+      color: white;
+    }
+
+    .btn-teal:hover {
+      background: #066B59;
+    }
+
+    .btn-secondary {
+      background: #EEF1F7;
+      color: var(--navy);
+      border-color: #E4E8F0;
+    }
+
+    .btn-outline {
+      background: white;
+      border-color: var(--border);
+      color: var(--navy);
+    }
+
+    .btn-danger {
+      background: var(--red);
+      color: white;
+    }
+
+    .btn-sm {
+      min-height: 33px;
+      padding: 6px 10px;
+      font-size: 11px;
+      border-radius: 8px;
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    /* =====================================================
+       INPUTS
+       ===================================================== */
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field label {
+      color: #48536B;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      min-width: 0;
+      min-height: 42px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #DDE3ED;
+      outline: none;
+      background: white;
+      color: var(--text);
+      transition: border .16s ease, box-shadow .16s ease;
+    }
+
+    .field textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(25, 184, 154, .1);
+    }
+
+    .field input:disabled,
+    .field textarea:disabled,
+    .field select:disabled {
+      background: #EDF0F5;
+      cursor: not-allowed;
+    }
+
+    .field-hint {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .span-2 {
+      grid-column: 1 / -1;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .check-row input {
+      width: 16px;
+      height: 16px;
+      margin-top: 4px;
+      accent-color: var(--teal-dark);
+      flex-shrink: 0;
+    }
+
+    /* =====================================================
+       ACCESS SCREEN
+       ===================================================== */
+
+    .access-screen {
+      min-height: 100dvh;
+      padding: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .access-card {
+      width: 100%;
+      max-width: 470px;
+      padding: 34px;
+      text-align: center;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .access-icon {
+      width: 67px;
+      height: 67px;
+      margin: 0 auto 19px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: #EDF1FF;
+      color: var(--navy);
+      font-size: 27px;
+    }
+
+    .access-card h1 {
+      color: var(--navy);
+      font-size: 23px;
+      margin: 0 0 10px;
+    }
+
+    .access-card p {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 0 0 21px;
+    }
+
+    /* =====================================================
+       APPLICATION LAYOUT
+       ===================================================== */
+
+    .admin-layout {
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 255px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      padding: 22px 14px;
+      background: white;
+      border-right: 1px solid var(--border);
+      z-index: 60;
+    }
+
+    .sidebar-brand {
+      padding: 0 10px 23px;
+      border-bottom: 1px solid #EDF0F5;
+    }
+
+    .sidebar-label {
+      padding: 19px 11px 8px;
+      color: #A0A7B8;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .sidebar-menu {
+      display: grid;
+      gap: 4px;
+    }
+
+    .nav-button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 13px;
+      border: 0;
+      background: transparent;
+      border-radius: 10px;
+      color: #6F7890;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: left;
+      transition: background .16s ease, color .16s ease;
+    }
+
+    .nav-button i {
+      width: 18px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .nav-button:hover {
+      background: #F5F7FA;
+      color: var(--navy);
+    }
+
+    .nav-button.active {
+      background: #EDF1FF;
+      color: var(--navy);
+      font-weight: 700;
+    }
+
+    .nav-button.active i {
+      color: var(--teal-dark);
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding-top: 24px;
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 8px;
+      border-top: 1px solid var(--border);
+      margin-top: 15px;
+    }
+
+    .sidebar-avatar {
+      width: 37px;
+      height: 37px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      border-radius: 11px;
+      background: #EDF1FF;
+      color: var(--navy);
+      font-weight: 700;
+    }
+
+    .sidebar-user-name {
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--navy);
+      overflow-wrap: anywhere;
+    }
+
+    .sidebar-user-email {
+      color: var(--muted);
+      font-size: 10px;
+      overflow-wrap: anywhere;
+    }
+
+    .app-main {
+      min-width: 0;
+      padding: 0 27px 40px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      min-height: 84px;
+      margin-bottom: 26px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 23px;
+      line-height: 1.3;
+      letter-spacing: -.5px;
+    }
+
+    .topbar p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: white;
+      color: #657089;
+    }
+
+    .page-content {
+      min-width: 0;
+    }
+
+    .page-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 13px;
+      margin: 0 0 20px;
+    }
+
+    .page-heading h2 {
+      color: var(--navy);
+      font-size: 21px;
+      margin: 0;
+    }
+
+    .page-heading p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    /* =====================================================
+       CARDS
+       ===================================================== */
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .card {
+      min-width: 0;
+      padding: 20px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 3px 12px rgba(16, 27, 72, .015);
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .card-title small {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 10px;
+    }
+
+    .metric {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .metric-icon {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      background: #EDF1FF;
+      border-radius: 13px;
+      color: var(--navy);
+      font-size: 17px;
+    }
+
+    .metric-icon.teal {
+      background: #E2F8F1;
+      color: var(--teal-dark);
+    }
+
+    .metric-icon.amber {
+      background: #FFF4DF;
+      color: #986416;
+    }
+
+    .metric-icon.purple {
+      background: #F0E9FC;
+      color: var(--purple);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .metric-value {
+      font-size: 23px;
+      line-height: 1.35;
+      font-weight: 700;
+      color: var(--navy);
+      margin-top: 3px;
+      overflow-wrap: anywhere;
+    }
+
+    .metric-caption {
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 4px;
+    }
+
+    .hero-card {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(125deg, #101B48, #243D83);
+      color: white;
+      border: 0;
+    }
+
+    .hero-card .metric-label,
+    .hero-card .metric-caption {
+      color: #D3DBF2;
+    }
+
+    .hero-card .metric-value {
+      color: white;
+      font-size: 28px;
+    }
+
+    .hero-card .card-title {
+      color: white;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 190px;
+      height: 190px;
+      top: -95px;
+      right: -50px;
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 25px rgba(255, 255, 255, .035),
+        0 0 0 50px rgba(255, 255, 255, .025);
+      pointer-events: none;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 5px 9px;
+      border-radius: 25px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .status-pill.success {
+      color: #08785F;
+      background: #E3F7EF;
+    }
+
+    .status-pill.warning {
+      color: #946315;
+      background: #FFF5DF;
+    }
+
+    .status-pill.danger {
+      color: #B93443;
+      background: #FFECEE;
+    }
+
+    .status-pill.info {
+      color: #304C9C;
+      background: #E9EEFF;
+    }
+
+    .status-pill.neutral {
+      color: #5D6881;
+      background: #EEF1F6;
+    }
+
+    .alert-box {
+      padding: 13px 15px;
+      border-radius: 12px;
+      border: 1px solid #DFE8FB;
+      background: #F2F6FF;
+      color: #304C86;
+      font-size: 11px;
+      line-height: 1.85;
+    }
+
+    .alert-box.warning {
+      border-color: #F4E3B8;
+      background: #FFF9EA;
+      color: #8A5B08;
+    }
+
+    .alert-box.success {
+      border-color: #DCEFE7;
+      background: #F2FBF8;
+      color: #16765F;
+    }
+
+    .alert-box.danger {
+      border-color: #F3D4D7;
+      background: #FFF3F3;
+      color: #B62F42;
+    }
+
+    /* =====================================================
+       TABLES
+       ===================================================== */
+
+    .table-toolbar {
+      display: flex;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .table-toolbar .field {
+      min-width: 150px;
+      flex: 1;
+    }
+
+    .table-toolbar .field input,
+    .table-toolbar .field select {
+      min-height: 39px;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      min-width: 680px;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    th {
+      padding: 13px 14px;
+      background: #F7F8FB;
+      color: #657089;
+      font-weight: 600;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 13px 14px;
+      border-top: 1px solid #EEF0F5;
+      vertical-align: middle;
+      color: #45506A;
+    }
+
+    tbody tr:hover {
+      background: #FBFCFE;
+    }
+
+    .table-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .empty-state {
+      padding: 35px 17px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty-state i {
+      width: 57px;
+      height: 57px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 12px;
+      background: #F1F3F8;
+      border-radius: 18px;
+      color: #8992A7;
+      font-size: 22px;
+    }
+
+    .empty-state h3 {
+      color: var(--navy);
+      font-size: 14px;
+      margin: 0 0 6px;
+    }
+
+    .empty-state p {
+      max-width: 440px;
+      margin: auto;
+      font-size: 11px;
+      line-height: 1.85;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 9px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    /* =====================================================
+       ANNOUNCEMENT EDITOR
+       ===================================================== */
+
+    .announcement-editor {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 15px;
+    }
+
+    .announcement-preview {
+      min-height: 240px;
+      background: #F7F8FB;
+      border: 1px dashed #C7CFDE;
+      border-radius: 13px;
+      padding: 15px;
+      overflow: auto;
+    }
+
+    .announcement-preview-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .announcement-preview-card img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .announcement-preview-content {
+      padding: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .announcement-preview-content h1,
+    .announcement-preview-content h2,
+    .announcement-preview-content h3 {
+      color: var(--navy);
+      line-height: 1.4;
+    }
+
+    .announcement-preview-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .file-drop {
+      padding: 19px;
+      border: 1px dashed #BAC4D4;
+      background: #F8F9FC;
+      border-radius: 12px;
+      text-align: center;
+      color: #6E7890;
+    }
+
+    .file-drop i {
+      font-size: 24px;
+      display: block;
+      margin-bottom: 8px;
+      color: #6679B0;
+    }
+
+    /* =====================================================
+       MODAL
+       ===================================================== */
+
+    .modal-root {
+      position: fixed;
+      z-index: 30000;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      background: rgba(13, 22, 52, .48);
+      backdrop-filter: blur(5px);
+      animation: backdropIn .17s ease;
+    }
+
+    @keyframes backdropIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 580px;
+      max-height: 91dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-radius: 19px;
+      background: white;
+      box-shadow: 0 25px 100px rgba(7, 14, 38, .26);
+      animation: modalIn .2s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .modal-card.large {
+      max-width: 900px;
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: translateY(11px) scale(.985);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 13px;
+      padding: 18px 21px;
+      border-bottom: 1px solid #EDF0F5;
+    }
+
+    .modal-header h3 {
+      color: var(--navy);
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .modal-close {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 10px;
+      background: #F0F2F7;
+      color: #667087;
+      display: grid;
+      place-items: center;
+    }
+
+    .modal-body {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 21px;
+      font-size: 12px;
+      line-height: 1.9;
+    }
+
+    .modal-footer {
+      flex-shrink: 0;
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 21px;
+      border-top: 1px solid #EDF0F5;
+      background: white;
+    }
+
+    .modal-footer .btn {
+      min-width: 105px;
+    }
+
+    /* =====================================================
+       TOAST
+       ===================================================== */
+
+    .toast-root {
+      position: fixed;
+      z-index: 40000;
+      right: 18px;
+      top: 18px;
+      width: min(375px, calc(100vw - 36px));
+      display: grid;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 14px 15px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      box-shadow: var(--shadow);
+      animation: toastIn .22s ease;
+    }
+
+    .toast > i {
+      font-size: 17px;
+      margin-top: 2px;
+    }
+
+    .toast.success > i { color: var(--green); }
+    .toast.error > i { color: var(--red); }
+    .toast.info > i { color: var(--blue); }
+
+    .toast strong {
+      display: block;
+      color: var(--navy);
+      font-size: 12px;
+    }
+
+    .toast span {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateX(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* =====================================================
+       SUPPORT TICKETS / DETAIL
+       ===================================================== */
+
+    .data-list {
+      display: grid;
+    }
+
+    .data-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 11px 0;
+      border-bottom: 1px solid #EEF0F5;
+      font-size: 11px;
+    }
+
+    .data-row:last-child {
+      border-bottom: 0;
+    }
+
+    .data-row > span:first-child {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .data-row > span:last-child {
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    /* =====================================================
+       MOBILE
+       ===================================================== */
+
+    .mobile-top-menu {
+      display: none;
+    }
+
+    @media (max-width: 1150px) {
+      .admin-layout {
+        grid-template-columns: 225px minmax(0, 1fr);
+      }
+
+      .grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .app-main {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+    }
+
+    @media (max-width: 850px) {
+      .admin-layout {
+        display: block;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .mobile-top-menu {
+        display: flex;
+        gap: 7px;
+        overflow-x: auto;
+        padding: 10px 0;
+        margin-bottom: 13px;
+      }
+
+      .mobile-top-menu button {
+        flex-shrink: 0;
+      }
+
+      .app-main {
+        padding: 0 15px 32px;
+      }
+
+      .topbar {
+        min-height: 74px;
+        margin-bottom: 21px;
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .form-grid,
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .announcement-editor {
+        grid-template-columns: 1fr;
+      }
+
+      .span-2 {
+        grid-column: auto;
+      }
+
+      .app-main {
+        padding-left: 11px;
+        padding-right: 11px;
+      }
+
+      .card {
+        padding: 15px;
+      }
+
+      .topbar {
+        gap: 10px;
+      }
+
+      .topbar h1 {
+        font-size: 18px;
+      }
+
+      .topbar p {
+        display: none;
+      }
+
+      .page-heading h2 {
+        font-size: 19px;
+      }
+
+      .metric-value {
+        font-size: 21px;
+      }
+
+      .modal-root {
+        padding: 9px;
+      }
+
+      .modal-card {
+        max-height: 94dvh;
+        border-radius: 16px;
+      }
+
+      .modal-header,
+      .modal-body,
+      .modal-footer {
+        padding-left: 15px;
+        padding-right: 15px;
+      }
+
+      .modal-footer .btn {
+        flex: 1;
+      }
+
+      .access-card {
+        padding: 25px 19px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===================================================
+       GLOBAL LOADER
+       =================================================== -->
+
+  <div id="globalLoader" class="global-loader" role="status" aria-live="polite">
+    <div class="loader-dots" aria-hidden="true">
+      <span class="loader-dot blue"></span>
+      <span class="loader-dot red"></span>
+      <span class="loader-dot purple"></span>
+      <span class="loader-dot green"></span>
+    </div>
+    <div id="globalLoaderMessage" class="loader-message">
+      กำลังโหลดข้อมูลระบบ
+    </div>
+  </div>
+
+  <!-- ===================================================
+       TOAST
+       =================================================== -->
+
+  <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+
+  <!-- ===================================================
+       MODAL
+       =================================================== -->
+
+  <div id="modalRoot" class="modal-root hidden" role="dialog" aria-modal="true">
+    <div id="modalCard" class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">FINORA</h3>
+        <button id="modalCloseButton" class="modal-close" type="button" aria-label="ปิดหน้าต่าง">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+      <div id="modalFooter" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       ACCESS DENIED / NOT LOGGED IN
+       =================================================== -->
+
+  <section id="accessScreen" class="access-screen hidden">
+    <div class="access-card">
+      <div class="brand" style="justify-content:center;margin-bottom:26px">
+        <span class="brand-mark">F</span>
+        <span>
+          <span class="brand-name">FINORA</span>
+          <span class="brand-subtitle" style="display:block">ADMINISTRATION PORTAL</span>
+        </span>
+      </div>
+
+      <div id="accessIcon" class="access-icon">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+
+      <h1 id="accessTitle">ระบบผู้ดูแลระบบ</h1>
+
+      <p id="accessMessage">
+        กำลังตรวจสอบสิทธิ์การเข้าใช้งาน
+      </p>
+
+      <button id="returnLoginButton" class="btn btn-primary btn-block" type="button">
+        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+        กลับไปหน้าเข้าสู่ระบบ
+      </button>
+
+      <div class="powered" style="margin-top:20px">
+        Powered by <strong>FINORA</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================
+       ADMIN APPLICATION
+       =================================================== -->
+
+  <div id="adminApp" class="admin-layout hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <div class="sidebar-brand">
+        <a class="brand" href="#" aria-label="FINORA">
+          <span class="brand-mark">F</span>
+          <span>
+            <span class="brand-name">FINORA</span>
+            <span class="brand-subtitle" style="display:block">
+              ADMINISTRATION PORTAL
+            </span>
+          </span>
+        </a>
+      </div>
+
+      <div class="sidebar-label">ภาพรวม</div>
+
+      <nav class="sidebar-menu">
+        <button class="nav-button active" data-page="dashboard">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Dashboard</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-label">การดำเนินงานสินเชื่อ</div>
+
+      <nav class="sidebar-menu">
+        <button class="nav-button" data-page="applications">
+          <i class="fa-solid fa-file-circle-check"></i>
+          <span>คำขอสินเชื่อ</span>
+        </button>
+
+        <button class="nav-button" data-page="users">
+          <i class="fa-solid fa-users"></i>
+          <span>จัดการลูกค้า</span>
+        </button>
+
+        <button class="nav-button" data-page="products">
+          <i class="fa-solid fa-wallet"></i>
+          <span>ผลิตภัณฑ์สินเชื่อ</span>
+        </button>
+
+        <button class="nav-button" data-page="contracts">
+          <i class="fa-solid fa-file-signature"></i>
+          <span>สัญญาและการจ่ายเงิน</span>
+        </button>
+
+        <button class="nav-button" data-page="repayments">
+          <i class="fa-solid fa-calendar-check"></i>
+          <span>ตารางชำระ</span>
+        </button>
+
+        <button class="nav-button" data-page="transactions">
+          <i class="fa-solid fa-money-bill-transfer"></i>
+          <span>ธุรกรรมและการเงิน</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-label">เว็บไซต์และการบริการ</div>
+
+      <nav class="sidebar-menu">
+        <button class="nav-button" data-page="announcements">
+          <i class="fa-solid fa-bullhorn"></i>
+          <span>จัดการประกาศ</span>
+        </button>
+
+        <button class="nav-button" data-page="support">
+          <i class="fa-solid fa-headset"></i>
+          <span>ศูนย์ช่วยเหลือ</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+
+        <div class="alert-box success">
+          <i class="fa-solid fa-shield-halved"></i>
+          ระบบควบคุมสิทธิ์ฝั่งเซิร์ฟเวอร์
+        </div>
+
+        <div class="sidebar-user">
+          <div id="adminAvatar" class="sidebar-avatar">A</div>
+          <div style="min-width:0">
+            <div id="adminName" class="sidebar-user-name">ผู้ดูแลระบบ</div>
+            <div id="adminEmail" class="sidebar-user-email"></div>
+          </div>
+        </div>
+
+        <button id="logoutButton" class="nav-button" style="color:#C73D4C">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span>ออกจากระบบ</span>
+        </button>
+
+        <div class="powered" style="margin-top:17px">
+          Powered by <strong>FINORA</strong>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="app-main">
+
+      <header class="topbar">
+        <div>
+          <h1 id="topbarTitle">Dashboard</h1>
+          <p id="topbarSubtitle">ภาพรวมการดำเนินงาน FINORA</p>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="refreshButton" class="icon-button" type="button" title="รีเฟรชข้อมูล">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+
+          <div class="status-pill success">
+            <i class="fa-solid fa-shield-halved"></i>
+            Admin
+          </div>
+        </div>
+      </header>
+
+      <nav class="mobile-top-menu">
+        <button class="btn btn-secondary btn-sm" data-page="dashboard">Dashboard</button>
+        <button class="btn btn-secondary btn-sm" data-page="applications">คำขอ</button>
+        <button class="btn btn-secondary btn-sm" data-page="users">ลูกค้า</button>
+        <button class="btn btn-secondary btn-sm" data-page="products">สินเชื่อ</button>
+        <button class="btn btn-secondary btn-sm" data-page="contracts">สัญญา</button>
+        <button class="btn btn-secondary btn-sm" data-page="repayments">ตารางชำระ</button>
+        <button class="btn btn-secondary btn-sm" data-page="transactions">ธุรกรรม</button>
+        <button class="btn btn-secondary btn-sm" data-page="announcements">ประกาศ</button>
+        <button class="btn btn-secondary btn-sm" data-page="support">ช่วยเหลือ</button>
+      </nav>
+
+      <section id="pageContent" class="page-content"></section>
+
+    </main>
+  </div>
+
+
+  <script>
+    "use strict";
+
+    /* =====================================================
+       1. CONFIGURATION
+       ===================================================== */
+
+    const FINORA_ADMIN_CONFIG = Object.freeze({
+
+      /*
+       * Replace with the deployed Google Apps Script Web App URL.
+       *
+       * Use the current deployment URL from Script Properties API_URL.
+       *
+       * Example:
+       * https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+       */
+      API_URL: "https://script.google.com/macros/s/AKfycbyWJroEmS5AA-sRgn-P6SXoUpqNaSTRIb8w9PSr_sNOLXCUf5PaqvEABpnOkB8_aUQuLA/exec",
+
+      APP_NAME: "FINORA",
+
+      SESSION_STORAGE_KEY: "FINORA_SESSION_TOKEN",
+
+      USER_STORAGE_KEY: "FINORA_USER",
+
+      MAX_API_TIMEOUT_MS: 45000,
+
+      MAX_IMAGE_SIZE_BYTES: 5242880,
+
+      IMAGE_ALLOWED_TYPES: [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+      ]
+    });
+
+
+    /* =====================================================
+       2. STATE
+       ===================================================== */
+
+    const state = {
+      sessionToken: "",
+      user: null,
+
+      currentPage: "dashboard",
+
+      loadingCount: 0,
+
+      stats: null,
+
+      applications: [],
+      users: [],
+      products: [],
+      repayments: [],
+      transactions: [],
+      announcements: [],
+      tickets: [],
+
+      applicationPage: 1,
+      userPage: 1,
+
+      applicationStatusFilter: "ALL",
+      userSearch: "",
+
+      selectedAnnouncementId: "",
+      currentAnnouncementImageUrl: "",
+
+      selectedApplicationId: "",
+
+      isAuthorized: false
+    };
+
+
+    /* =====================================================
+       3. GENERAL HELPERS
+       ===================================================== */
+
+    const $ = function (selector, root) {
+      return (root || document).querySelector(selector);
+    };
+
+    const $$ = function (selector, root) {
+      return Array.from((root || document).querySelectorAll(selector));
+    };
+
+    function escapeHtml(value) {
+      return String(value === null || value === undefined ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatMoney(value) {
+      const amount = Number(value || 0);
+
+      if (!Number.isFinite(amount)) {
+        return "0.00";
+      }
+
+      return amount.toLocaleString("th-TH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "—";
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return escapeHtml(value);
+      }
+
+      return date.toLocaleDateString("th-TH", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function formatDateTime(value) {
+      if (!value) {
+        return "—";
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return escapeHtml(value);
+      }
+
+      return date.toLocaleString("th-TH", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function setText(selector, value) {
+      const element = $(selector);
+
+      if (element) {
+        element.textContent = String(
+          value === null || value === undefined ? "" : value
+        );
+      }
+    }
+
+    function showElement(selector) {
+      const element = $(selector);
+
+      if (element) {
+        element.classList.remove("hidden");
+      }
+    }
+
+    function hideElement(selector) {
+      const element = $(selector);
+
+      if (element) {
+        element.classList.add("hidden");
+      }
+    }
+
+    function setButtonLoading(button, loading, message) {
+      if (!button) {
+        return;
+      }
+
+      if (loading) {
+        if (!button.dataset.originalHtml) {
+          button.dataset.originalHtml = button.innerHTML;
+        }
+
+        button.disabled = true;
+
+        button.innerHTML =
+          '<i class="fa-solid fa-circle-notch fa-spin"></i> ' +
+          escapeHtml(message || "กำลังดำเนินการ...");
+
+      } else {
+        button.disabled = false;
+
+        if (button.dataset.originalHtml) {
+          button.innerHTML = button.dataset.originalHtml;
+          delete button.dataset.originalHtml;
+        }
+      }
+    }
+
+    function cloneObject(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+
+    /* =====================================================
+       4. GLOBAL LOADER
+       ===================================================== */
+
+    function showLoading(message) {
+      state.loadingCount++;
+
+      setText(
+        "#globalLoaderMessage",
+        message || "กำลังโหลดข้อมูลระบบ"
+      );
+
+      showElement("#globalLoader");
+    }
+
+    function hideLoading(force) {
+      if (force) {
+        state.loadingCount = 0;
+      } else {
+        state.loadingCount = Math.max(0, state.loadingCount - 1);
+      }
+
+      if (state.loadingCount === 0) {
+        hideElement("#globalLoader");
+      }
+    }
+
+    async function withLoading(message, callback) {
+      showLoading(message);
+
+      try {
+        return await callback();
+      } finally {
+        hideLoading();
+      }
+    }
+
+
+    /* =====================================================
+       5. MODAL
+       ===================================================== */
+
+    function showModal(options) {
+      const settings = Object.assign({
+        title: "FINORA",
+        body: "",
+        buttons: [],
+        large: false,
+        closeable: true,
+        onClose: null
+      }, options || {});
+
+      const root = $("#modalRoot");
+      const card = $("#modalCard");
+      const footer = $("#modalFooter");
+
+      setText("#modalTitle", settings.title);
+
+      $("#modalBody").innerHTML = settings.body;
+
+      card.classList.toggle("large", Boolean(settings.large));
+
+      footer.innerHTML = "";
+
+      settings.buttons.forEach(function (config) {
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "btn " +
+          (config.className || "btn-primary");
+
+        button.innerHTML = config.icon
+          ? '<i class="' + escapeHtml(config.icon) + '"></i> ' +
+            escapeHtml(config.label)
+          : escapeHtml(config.label);
+
+        if (config.id) {
+          button.id = config.id;
+        }
+
+        button.disabled = Boolean(config.disabled);
+
+        button.addEventListener("click", async function () {
+          if (typeof config.onClick === "function") {
+            await config.onClick(button);
+          }
+        });
+
+        footer.appendChild(button);
+      });
+
+      $("#modalCloseButton").classList.toggle(
+        "hidden",
+        !settings.closeable
+      );
+
+      root.dataset.closeable = String(Boolean(settings.closeable));
+      root._finoraOnClose = settings.onClose;
+
+      root.classList.remove("hidden");
+
+      const firstButton = $("button", footer);
+
+      if (firstButton) {
+        setTimeout(function () {
+          firstButton.focus();
+        }, 20);
+      }
+
+      return {
+        body: $("#modalBody"),
+        footer: footer
+      };
+    }
+
+    function closeModal() {
+      const root = $("#modalRoot");
+
+      if (root.classList.contains("hidden")) {
+        return;
+      }
+
+      const closeCallback = root._finoraOnClose;
+
+      root.classList.add("hidden");
+      $("#modalBody").innerHTML = "";
+      $("#modalFooter").innerHTML = "";
+
+      root._finoraOnClose = null;
+
+      if (typeof closeCallback === "function") {
+        closeCallback();
+      }
+    }
+
+    function showMessageModal(title, message, type) {
+      const color = type === "success"
+        ? "#0F9F77"
+        : type === "error"
+          ? "#D94452"
+          : "#315DB8";
+
+      const icon = type === "success"
+        ? "fa-circle-check"
+        : type === "error"
+          ? "fa-circle-exclamation"
+          : "fa-circle-info";
+
+      showModal({
+        title: title,
+        body:
+          '<div class="text-center" style="padding:10px 0">' +
+            '<div style="font-size:45px;color:' + color + ';margin-bottom:13px">' +
+              '<i class="fa-solid ' + icon + '"></i>' +
+            '</div>' +
+            '<div style="color:#5D667C;line-height:1.9;overflow-wrap:anywhere">' +
+              escapeHtml(message) +
+            '</div>' +
+          '</div>',
+        buttons: [
+          {
+            label: "ตกลง",
+            className: "btn-primary",
+            onClick: closeModal
+          }
+        ]
+      });
+    }
+
+    function showToast(message, type, title) {
+      const root = $("#toastRoot");
+      const toast = document.createElement("div");
+
+      const kind = ["success", "error", "info"].indexOf(type) >= 0
+        ? type
+        : "info";
+
+      const icon = kind === "success"
+        ? "fa-circle-check"
+        : kind === "error"
+          ? "fa-circle-exclamation"
+          : "fa-circle-info";
+
+      toast.className = "toast " + kind;
+
+      toast.innerHTML =
+        '<i class="fa-solid ' + icon + '"></i>' +
+        '<div style="min-width:0">' +
+          '<strong>' + escapeHtml(title || (
+            kind === "success"
+              ? "สำเร็จ"
+              : kind === "error"
+                ? "เกิดข้อผิดพลาด"
+                : "แจ้งให้ทราบ"
+          )) + '</strong>' +
+          '<span>' + escapeHtml(message) + '</span>' +
+        '</div>';
+
+      root.appendChild(toast);
+
+      setTimeout(function () {
+        toast.remove();
+      }, 4500);
+    }
+
+    $("#modalCloseButton").addEventListener("click", function () {
+      if ($("#modalRoot").dataset.closeable !== "false") {
+        closeModal();
+      }
+    });
+
+    $("#modalRoot").addEventListener("click", function (event) {
+      if (
+        event.target === $("#modalRoot") &&
+        $("#modalRoot").dataset.closeable !== "false"
+      ) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (
+        event.key === "Escape" &&
+        !$("#modalRoot").classList.contains("hidden") &&
+        $("#modalRoot").dataset.closeable !== "false"
+      ) {
+        closeModal();
+      }
+    });
+
+
+    /* =====================================================
+       6. API TRANSPORT
+       ===================================================== */
+
+    function validateApiUrl() {
+      const url = FINORA_ADMIN_CONFIG.API_URL;
+
+      if (
+        typeof url !== "string" ||
+        !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/i.test(url)
+      ) {
+        throw new Error(
+          "กรุณาตั้งค่า API_URL เป็น URL Google Apps Script Web App ที่ลงท้ายด้วย /exec"
+        );
+      }
+
+      return url;
+    }
+
+    function isGoogleAppsScriptOrigin(origin) {
+      try {
+        const parsed = new URL(origin);
+
+        if (parsed.protocol !== "https:") {
+          return false;
+        }
+
+        const host = parsed.hostname.toLowerCase();
+
+        return host === "script.google.com" ||
+          host === "script.googleusercontent.com" ||
+          host.endsWith(".script.googleusercontent.com");
+
+      } catch (error) {
+        return false;
+      }
+    }
+
+    /**
+     * Uses an iframe-targeted POST form and a postMessage response.
+     * This matches createBridgeResponse_() in Code.gs.
+     */
+    function api(action, payload) {
+      const baseUrl = validateApiUrl();
+
+      const request = Object.assign(
+        {},
+        payload || {},
+        {
+          action: String(action || ""),
+          transport: "bridge"
+        }
+      );
+
+      if (
+        state.sessionToken &&
+        request.sessionToken === undefined &&
+        action !== "login" &&
+        action !== "signup" &&
+        action !== "startEmailVerification" &&
+        action !== "verifyEmail" &&
+        action !== "forgotPassword" &&
+        action !== "resetPassword" &&
+        action !== "getPublicConfig" &&
+        action !== "getPublicAnnouncements"
+      ) {
+        request.sessionToken = state.sessionToken;
+      }
+
+      return new Promise(function (resolve, reject) {
+        const frameName =
+          "finora_admin_" +
+          Date.now() +
+          "_" +
+          Math.random().toString(36).slice(2);
+
+        const iframe = document.createElement("iframe");
+        const form = document.createElement("form");
+
+        iframe.name = frameName;
+        iframe.title = "FINORA API transport";
+        iframe.setAttribute("aria-hidden", "true");
+
+        iframe.style.position = "fixed";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        iframe.style.opacity = "0";
+        iframe.style.pointerEvents = "none";
+        iframe.style.left = "-10px";
+        iframe.style.top = "-10px";
+
+        form.method = "POST";
+        form.action = baseUrl.split("?")[0] + "?transport=bridge";
+        form.target = frameName;
+        form.acceptCharset = "UTF-8";
+
+        const payloadInput = document.createElement("input");
+
+        payloadInput.type = "hidden";
+        payloadInput.name = "payload";
+        payloadInput.value = JSON.stringify(request);
+
+        const transportInput = document.createElement("input");
+
+        transportInput.type = "hidden";
+        transportInput.name = "transport";
+        transportInput.value = "bridge";
+
+        form.appendChild(payloadInput);
+        form.appendChild(transportInput);
+
+        document.body.appendChild(iframe);
+        document.body.appendChild(form);
+
+        let settled = false;
+
+        function cleanup() {
+          window.removeEventListener("message", onMessage);
+
+          if (form.parentNode) {
+            form.parentNode.removeChild(form);
+          }
+
+          if (iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+
+          clearTimeout(timeout);
+        }
+
+        function finish(callback, result) {
+          if (settled) {
+            return;
+          }
+
+          settled = true;
+          cleanup();
+          callback(result);
+        }
+
+        function onMessage(event) {
+          if (event.source !== iframe.contentWindow) {
+            return;
+          }
+
+          if (!isGoogleAppsScriptOrigin(event.origin)) {
+            return;
+          }
+
+          const message = event.data;
+
+          if (
+            !message ||
+            message.type !== "FINORA_API_RESPONSE" ||
+            !message.response
+          ) {
+            return;
+          }
+
+          const response = message.response;
+
+          if (response.ok === true) {
+            finish(resolve, response.data);
+
+          } else {
+            const error = new Error(
+              response.error && response.error.message
+                ? response.error.message
+                : "ระบบดำเนินการไม่สำเร็จ"
+            );
+
+            error.code = response.error
+              ? response.error.code
+              : "API_ERROR";
+
+            error.requestId = response.requestId || "";
+
+            finish(reject, error);
+          }
+        }
+
+        const timeout = setTimeout(function () {
+          const error = new Error(
+            "ไม่ได้รับการตอบกลับจากระบบภายในเวลาที่กำหนด"
+          );
+
+          error.code = "API_TIMEOUT";
+
+          finish(reject, error);
+        }, FINORA_ADMIN_CONFIG.MAX_API_TIMEOUT_MS);
+
+        window.addEventListener("message", onMessage);
+
+        setTimeout(function () {
+          if (settled) {
+            return;
+          }
+
+          try {
+            form.submit();
+          } catch (error) {
+            finish(reject, error);
+          }
+        }, 30);
+      });
+    }
+
+
+    /* =====================================================
+       7. SESSION MANAGEMENT
+       ===================================================== */
+
+    function readStoredSession() {
+      let token = "";
+      let user = null;
+
+      try {
+        token =
+          sessionStorage.getItem(
+            FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY
+          ) ||
+          localStorage.getItem(
+            FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY
+          ) ||
+          "";
+
+        const raw =
+          sessionStorage.getItem(
+            FINORA_ADMIN_CONFIG.USER_STORAGE_KEY
+          ) ||
+          localStorage.getItem(
+            FINORA_ADMIN_CONFIG.USER_STORAGE_KEY
+          );
+
+        if (raw) {
+          user = JSON.parse(raw);
+        }
+      } catch (error) {
+        token = "";
+        user = null;
+      }
+
+      return {
+        token: token,
+        user: user
+      };
+    }
+
+    function clearSession() {
+      state.sessionToken = "";
+      state.user = null;
+
+      try {
+        localStorage.removeItem(
+          FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY
+        );
+
+        sessionStorage.removeItem(
+          FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY
+        );
+
+        localStorage.removeItem(
+          FINORA_ADMIN_CONFIG.USER_STORAGE_KEY
+        );
+
+        sessionStorage.removeItem(
+          FINORA_ADMIN_CONFIG.USER_STORAGE_KEY
+        );
+      } catch (error) {
+        console.warn("Unable to clear session storage.");
+      }
+    }
+
+    function showAccessScreen(title, message, icon) {
+      hideElement("#adminApp");
+      showElement("#accessScreen");
+
+      setText("#accessTitle", title);
+      setText("#accessMessage", message);
+
+      const iconElement = $("#accessIcon");
+
+      iconElement.innerHTML =
+        '<i class="fa-solid ' +
+        escapeHtml(icon || "fa-shield-halved") +
+        '"></i>';
+    }
+
+    function showAdminApp() {
+      hideElement("#accessScreen");
+      showElement("#adminApp");
+
+      const user = state.user || {};
+
+      setText(
+        "#adminName",
+        [
+          user.prefix || "",
+          user.fullName || "ผู้ดูแลระบบ"
+        ].filter(Boolean).join(" ")
+      );
+
+      setText("#adminEmail", user.email || "");
+
+      setText(
+        "#adminAvatar",
+        String(user.fullName || "A")
+          .trim()
+          .charAt(0)
+          .toUpperCase()
+      );
+    }
+
+
+    /* =====================================================
+       8. AUTHORIZATION
+       ===================================================== */
+
+    async function initializeAdmin() {
+      const stored = readStoredSession();
+
+      if (!stored.token) {
+        showAccessScreen(
+          "กรุณาเข้าสู่ระบบก่อน",
+          "คุณต้องเข้าสู่ระบบ FINORA ก่อนเข้าถึงหน้าผู้ดูแลระบบ",
+          "fa-lock"
+        );
+
+        return;
+      }
+
+      state.sessionToken = stored.token;
+      state.user = stored.user;
+
+      try {
+        const result = await api("getMe");
+
+        state.user = result.user;
+
+        if (
+          !state.user ||
+          String(state.user.role || "").toUpperCase() !== "ADMIN"
+        ) {
+          showAccessScreen(
+            "ไม่มีสิทธิ์เข้าถึง",
+            "บัญชีนี้ไม่ได้รับสิทธิ์ผู้ดูแลระบบ หากคุณเป็นผู้ดูแลให้ตรวจสอบ ADMIN_EMAILS ใน Script Properties",
+            "fa-user-lock"
+          );
+
+          return;
+        }
+
+        state.isAuthorized = true;
+
+        const rememberMe = Boolean(
+          localStorage.getItem(
+            FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY
+          )
+        );
+
+        try {
+          localStorage.removeItem(
+            FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY
+          );
+
+          sessionStorage.removeItem(
+            FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY
+          );
+
+          localStorage.removeItem(
+            FINORA_ADMIN_CONFIG.USER_STORAGE_KEY
+          );
+
+          sessionStorage.removeItem(
+            FINORA_ADMIN_CONFIG.USER_STORAGE_KEY
+          );
+
+          const storage = rememberMe
+            ? localStorage
+            : sessionStorage;
+
+          storage.setItem(
+            FINORA_ADMIN_CONFIG.SESSION_STORAGE_KEY,
+            state.sessionToken
+          );
+
+          storage.setItem(
+            FINORA_ADMIN_CONFIG.USER_STORAGE_KEY,
+            JSON.stringify(state.user)
+          );
+
+        } catch (storageError) {
+          console.warn("Unable to refresh session storage.");
+        }
+
+        showAdminApp();
+
+        await navigateTo("dashboard");
+
+      } catch (error) {
+        clearSession();
+
+        showAccessScreen(
+          "เข้าสู่ระบบไม่สำเร็จ",
+          error.message +
+          " กรุณากลับไปหน้า Login และเข้าสู่ระบบใหม่",
+          "fa-circle-exclamation"
+        );
+      }
+    }
+
+
+    /* =====================================================
+       9. STATUS AND COMMON COMPONENTS
+       ===================================================== */
+
+    function statusPill(status) {
+      const key = String(status || "").toUpperCase();
+
+      const labels = {
+        SUBMITTED: ["ส่งคำขอแล้ว", "info"],
+        UNDER_REVIEW: ["กำลังตรวจสอบ", "warning"],
+        NEED_MORE_INFO: ["ต้องการข้อมูลเพิ่ม", "warning"],
+        APPROVED: ["อนุมัติแล้ว", "success"],
+        REJECTED: ["ไม่อนุมัติ", "danger"],
+        DISBURSED: ["จ่ายเงินแล้ว", "success"],
+        CANCELLED: ["ยกเลิก", "danger"],
+        ACTIVE: ["ใช้งานอยู่", "success"],
+        CLOSED: ["ปิดบัญชี", "neutral"],
+        UNPAID: ["รอชำระ", "warning"],
+        PARTIAL: ["ชำระบางส่วน", "warning"],
+        PAID: ["ชำระแล้ว", "success"],
+        PENDING: ["รอดำเนินการ", "warning"],
+        CREATING: ["กำลังสร้างรายการ", "info"],
+        FAILED: ["ไม่สำเร็จ", "danger"],
+        EXPIRED: ["หมดอายุ", "neutral"],
+        REVIEW_REQUIRED: ["รอตรวจสอบ", "warning"],
+        REJECTED_PAYMENT: ["ปฏิเสธรายการ", "danger"],
+        CONFIRMED: ["ยืนยันแล้ว", "success"],
+        OPEN: ["เปิดคำร้อง", "info"],
+        IN_PROGRESS: ["กำลังดำเนินการ", "warning"],
+        WAITING_CUSTOMER: ["รอข้อมูลจากลูกค้า", "warning"],
+        RESOLVED: ["แก้ไขแล้ว", "success"],
+        SIGNED: ["ลงนามแล้ว", "success"],
+        DRAFT: ["ฉบับร่าง", "neutral"],
+        OUT: ["จ่ายออก", "danger"],
+        IN: ["รับเข้า", "success"]
+      };
+
+      const item = labels[key] || [key || "ไม่ระบุ", "neutral"];
+
+      return (
+        '<span class="status-pill ' + item[1] + '">' +
+          escapeHtml(item[0]) +
+        '</span>'
+      );
+    }
+
+    function emptyState(icon, title, description) {
+      return (
+        '<div class="empty-state">' +
+          '<i class="' + escapeHtml(icon) + '"></i>' +
+          '<h3>' + escapeHtml(title) + '</h3>' +
+          '<p>' + escapeHtml(description) + '</p>' +
+        '</div>'
+      );
+    }
+
+    function renderDataTable(headers, rows) {
+      if (!rows || rows.length === 0) {
+        return emptyState(
+          "fa-solid fa-folder-open",
+          "ไม่พบข้อมูล",
+          "ยังไม่มีรายการที่ตรงกับเงื่อนไข"
+        );
+      }
+
+      return (
+        '<div class="table-wrap">' +
+          '<table>' +
+            '<thead><tr>' +
+              headers.map(function (header) {
+                return '<th>' + escapeHtml(header) + '</th>';
+              }).join("") +
+            '</tr></thead>' +
+            '<tbody>' +
+              rows.join("") +
+            '</tbody>' +
+          '</table>' +
+        '</div>'
+      );
+    }
+
+
+    /* =====================================================
+       10. NAVIGATION
+       ===================================================== */
+
+    const PAGE_META = {
+      dashboard: {
+        title: "Dashboard",
+        subtitle: "ภาพรวมการดำเนินงาน FINORA"
+      },
+      applications: {
+        title: "คำขอสินเชื่อ",
+        subtitle: "ตรวจสอบและจัดการคำขอของผู้สมัคร"
+      },
+      users: {
+        title: "จัดการลูกค้า",
+        subtitle: "ข้อมูลบัญชีผู้ใช้และประวัติสินเชื่อที่เกี่ยวข้อง"
+      },
+      products: {
+        title: "ผลิตภัณฑ์สินเชื่อ",
+        subtitle: "จัดการวงเงิน อัตราดอกเบี้ย ระยะเวลา และเงื่อนไข"
+      },
+      contracts: {
+        title: "สัญญาและการจ่ายเงิน",
+        subtitle: "บันทึกหลักฐานสัญญาและการจ่ายเงินที่เกิดขึ้นจริง"
+      },
+      repayments: {
+        title: "ตารางชำระ",
+        subtitle: "ติดตามยอดชำระตามงวด"
+      },
+      transactions: {
+        title: "ธุรกรรมและการเงิน",
+        subtitle: "ตรวจสอบรายการรับเงินและจ่ายเงินในระบบ"
+      },
+      announcements: {
+        title: "จัดการประกาศ",
+        subtitle: "สร้างประกาศ เลือกตำแหน่งแสดงผล และดูตัวอย่าง"
+      },
+      support: {
+        title: "ศูนย์ช่วยเหลือ",
+        subtitle: "จัดการคำร้องและการตอบกลับลูกค้า"
+      }
+    };
+
+    async function navigateTo(page) {
+      if (!PAGE_META[page]) {
+        page = "dashboard";
+      }
+
+      if (!state.isAuthorized) {
+        return;
+      }
+
+      state.currentPage = page;
+
+      $$(".nav-button[data-page]").forEach(function (button) {
+        button.classList.toggle(
+          "active",
+          button.dataset.page === page
+        );
+      });
+
+      setText("#topbarTitle", PAGE_META[page].title);
+      setText("#topbarSubtitle", PAGE_META[page].subtitle);
+
+      showLoading("กำลังโหลด" + PAGE_META[page].title);
+
+      try {
+        switch (page) {
+          case "dashboard":
+            await renderDashboard();
+            break;
+
+          case "applications":
+            await renderApplications();
+            break;
+
+          case "users":
+            await renderUsers();
+            break;
+
+          case "products":
+            await renderProducts();
+            break;
+
+          case "contracts":
+            await renderContracts();
+            break;
+
+          case "repayments":
+            await renderRepayments();
+            break;
+
+          case "transactions":
+            await renderTransactions();
+            break;
+
+          case "announcements":
+            await renderAnnouncements();
+            break;
+
+          case "support":
+            await renderSupportTickets();
+            break;
+
+          default:
+            await renderDashboard();
+        }
+
+      } catch (error) {
+        console.error("Page loading failed:", error);
+
+        $("#pageContent").innerHTML =
+          '<div class="card">' +
+            emptyState(
+              "fa-solid fa-circle-exclamation",
+              "โหลดข้อมูลไม่สำเร็จ",
+              error.message || "กรุณาลองใหม่อีกครั้ง"
+            ) +
+          '</div>';
+
+        showToast(
+          error.message || "โหลดข้อมูลไม่สำเร็จ",
+          "error"
+        );
+
+      } finally {
+        hideLoading();
+      }
+    }
+
+    document.addEventListener("click", function (event) {
+      const pageButton = event.target.closest("[data-page]");
+
+      if (
+        pageButton &&
+        state.isAuthorized &&
+        !pageButton.disabled
+      ) {
+        event.preventDefault();
+
+        navigateTo(pageButton.dataset.page);
+
+        return;
+      }
+
+      const actionButton = event.target.closest("[data-action]");
+
+      if (actionButton && state.isAuthorized) {
+        handleAction(
+          actionButton.dataset.action,
+          actionButton
+        );
+      }
+    });
+
+    $("#refreshButton").addEventListener("click", function () {
+      navigateTo(state.currentPage);
+    });
+
+
+    /* =====================================================
+       11. DASHBOARD STATISTICS
+       ===================================================== */
+
+    async function renderDashboard() {
+      const stats = await api("adminGetDashboardStats");
+
+      state.stats = stats;
+
+      const applications = await api(
+        "adminListApplications",
+        {
+          status: "ALL",
+          page: 1,
+          pageSize: 8
+        }
+      );
+
+      state.applications = applications.records || [];
+
+      const recentRows = state.applications.map(
+        function (application) {
+          return (
+            '<tr>' +
+              '<td>' + escapeHtml(application.applicationId) + '</td>' +
+              '<td>' +
+                escapeHtml(
+                  application.user && application.user.fullName
+                    ? application.user.fullName
+                    : "ไม่พบข้อมูล"
+                ) +
+              '</td>' +
+              '<td>' +
+                formatMoney(application.requestedAmount) +
+              ' บาท</td>' +
+              '<td>' + statusPill(application.status) + '</td>' +
+              '<td>' + formatDate(application.createdAt) + '</td>' +
+              '<td>' +
+                '<button class="btn btn-outline btn-sm" data-action="review-application" data-id="' +
+                  escapeHtml(application.applicationId) +
+                '">' +
+                  '<i class="fa-solid fa-eye"></i> ดู' +
+                '</button>' +
+              '</td>' +
+            '</tr>'
+          );
+        }
+      );
+
+      const applicationBars = [
+        {
+          label: "รอตรวจสอบ",
+          value: Number(stats.applicationsPendingReview || 0),
+          color: "#D4A03D"
+        },
+        {
+          label: "อนุมัติ",
+          value: Number(stats.applicationsApproved || 0),
+          color: "#19B89A"
+        },
+        {
+          label: "ไม่อนุมัติ",
+          value: Number(stats.applicationsRejected || 0),
+          color: "#D94452"
+        }
+      ];
+
+      const maxBar = Math.max(
+        1,
+        ...applicationBars.map(function (item) {
+          return item.value;
+        })
+      );
+
+      const bars = applicationBars.map(function (item) {
+        const width = Math.max(2, item.value / maxBar * 100);
+
+        return (
+          '<div style="margin-bottom:19px">' +
+            '<div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:7px">' +
+              '<span style="font-size:11px;color:#627089">' +
+                escapeHtml(item.label) +
+              '</span>' +
+              '<strong style="font-size:12px;color:#101B48">' +
+                item.value +
+              '</strong>' +
+            '</div>' +
+            '<div style="height:8px;border-radius:10px;background:#EDF0F5;overflow:hidden">' +
+              '<div style="width:' + width + '%;height:100%;border-radius:10px;background:' +
+                item.color +
+              '"></div>' +
+            '</div>' +
+          '</div>'
+        );
+      }).join("");
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>ภาพรวมธุรกิจ</h2>' +
+            '<p>สรุปข้อมูลที่บันทึกในระบบ FINORA ณ ' +
+              formatDateTime(stats.generatedAt) +
+            '</p>' +
+          '</div>' +
+          '<button class="btn btn-secondary btn-sm" data-action="refresh-dashboard">' +
+            '<i class="fa-solid fa-rotate"></i> รีเฟรชข้อมูล' +
+          '</button>' +
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:18px">' +
+          '<i class="fa-solid fa-circle-info"></i> ' +
+          'ตัวเลขทั้งหมดคำนวณจากรายการที่บันทึกใน Google Sheets ' +
+          'ควรกระทบยอดกับข้อมูลบัญชีจริงและผู้ให้บริการชำระเงินก่อนใช้เป็นรายงานทางการ' +
+        '</div>' +
+
+        '<div class="grid grid-4" style="margin-bottom:17px">' +
+
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon"><i class="fa-solid fa-users"></i></div>' +
+              '<div><div class="metric-label">ลูกค้าทั้งหมด</div>' +
+                '<div class="metric-value">' +
+                  Number(stats.totalUsers || 0).toLocaleString("th-TH") +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon amber"><i class="fa-solid fa-file-circle-check"></i></div>' +
+              '<div><div class="metric-label">คำขอสินเชื่อ</div>' +
+                '<div class="metric-value">' +
+                  Number(stats.totalApplications || 0).toLocaleString("th-TH") +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon teal"><i class="fa-solid fa-wallet"></i></div>' +
+              '<div><div class="metric-label">บัญชีสินเชื่อที่ใช้งาน</div>' +
+                '<div class="metric-value">' +
+                  Number(stats.activeLoanAccounts || 0).toLocaleString("th-TH") +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon purple"><i class="fa-solid fa-clock"></i></div>' +
+              '<div><div class="metric-label">คำขอรอตรวจสอบ</div>' +
+                '<div class="metric-value">' +
+                  Number(stats.applicationsPendingReview || 0).toLocaleString("th-TH") +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+        '<div class="grid grid-2" style="margin-bottom:17px">' +
+
+          '<div class="card hero-card">' +
+            '<div class="card-title">' +
+              '<span>เงินต้นคงเหลือรวม</span>' +
+              '<i class="fa-solid fa-coins"></i>' +
+            '</div>' +
+            '<div class="metric-value">' +
+              formatMoney(stats.totalOutstandingPrincipal) +
+              ' <span style="font-size:12px">บาท</span>' +
+            '</div>' +
+            '<div class="metric-caption">เงินต้นคงเหลือจากบัญชีสินเชื่อที่บันทึกไว้</div>' +
+            '<div style="margin-top:19px">' +
+              '<button class="btn btn-sm" style="background:#19B89A;color:#062D29" data-page="repayments">' +
+                'ดูตารางชำระเงิน' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="card-title">' +
+              '<span>การเคลื่อนไหวทางการเงิน</span>' +
+              '<i class="fa-solid fa-chart-column"></i>' +
+            '</div>' +
+            '<div class="data-list">' +
+              '<div class="data-row">' +
+                '<span>ยอดจ่ายเงินกู้ที่บันทึกแล้ว</span>' +
+                '<span><strong>' +
+                  formatMoney(stats.totalDisbursed) +
+                ' บาท</strong></span>' +
+              '</div>' +
+              '<div class="data-row">' +
+                '<span>ยอดรับชำระที่บันทึกแล้ว</span>' +
+                '<span><strong>' +
+                  formatMoney(stats.totalRepaid) +
+                ' บาท</strong></span>' +
+              '</div>' +
+              '<div class="data-row">' +
+                '<span>รายการชำระที่รอดำเนินการ</span>' +
+                '<span>' +
+                  Number(stats.pendingPaymentRequests || 0) +
+                ' รายการ</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+        '<div class="grid grid-2" style="margin-bottom:17px">' +
+
+          '<div class="card">' +
+            '<div class="card-title">' +
+              '<span>สรุปสถานะคำขอ</span>' +
+              '<small>จำนวนรายการ</small>' +
+            '</div>' +
+            bars +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="card-title">' +
+              '<span>เมนูด่วน</span>' +
+              '<small>การดำเนินงาน</small>' +
+            '</div>' +
+            '<div class="grid grid-2">' +
+              quickLinkCard("fa-solid fa-file-circle-check", "คำขอสินเชื่อ", "applications") +
+              quickLinkCard("fa-solid fa-users", "จัดการลูกค้า", "users") +
+              quickLinkCard("fa-solid fa-bullhorn", "จัดการประกาศ", "announcements") +
+              quickLinkCard("fa-solid fa-headset", "ศูนย์ช่วยเหลือ", "support") +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-title">' +
+            '<span>คำขอสินเชื่อล่าสุด</span>' +
+            '<button class="btn btn-outline btn-sm" data-page="applications">' +
+              'ดูทั้งหมด <i class="fa-solid fa-arrow-right"></i>' +
+            '</button>' +
+          '</div>' +
+
+          renderDataTable(
+            [
+              "เลขที่คำขอ",
+              "ผู้สมัคร",
+              "วงเงินที่ขอ",
+              "สถานะ",
+              "วันที่",
+              "ดำเนินการ"
+            ],
+            recentRows
+          ) +
+        '</div>';
+    }
+
+    function quickLinkCard(icon, title, page) {
+      return (
+        '<button class="card" data-page="' + escapeHtml(page) +
+        '" style="text-align:left;padding:15px;border:1px solid #E4E8F0;background:#fff">' +
+          '<div class="metric-icon teal" style="margin-bottom:10px">' +
+            '<i class="' + escapeHtml(icon) + '"></i>' +
+          '</div>' +
+          '<strong style="display:block;color:#101B48;font-size:11px">' +
+            escapeHtml(title) +
+          '</strong>' +
+        '</button>'
+      );
+    }
+
+
+    /* =====================================================
+       12. APPLICATIONS
+       ===================================================== */
+
+    async function renderApplications() {
+      const result = await api(
+        "adminListApplications",
+        {
+          status: state.applicationStatusFilter,
+          page: state.applicationPage,
+          pageSize: 50
+        }
+      );
+
+      state.applications = result.records || [];
+
+      const rows = state.applications.map(
+        function (application) {
+          const user = application.user || {};
+
+          return (
+            '<tr>' +
+              '<td>' +
+                '<strong>' + escapeHtml(application.applicationId) + '</strong>' +
+              '</td>' +
+              '<td>' +
+                '<div style="font-weight:600;color:#101B48">' +
+                  escapeHtml(user.fullName || "ไม่พบข้อมูล") +
+                '</div>' +
+                '<div class="small muted">' +
+                  escapeHtml(user.email || "") +
+                '</div>' +
+              '</td>' +
+              '<td>' +
+                formatMoney(application.requestedAmount) +
+              ' บาท</td>' +
+              '<td>' + Number(application.requestedTermMonths || 0) + ' เดือน</td>' +
+              '<td>' + statusPill(application.status) + '</td>' +
+              '<td>' + formatDate(application.createdAt) + '</td>' +
+              '<td>' +
+                '<div class="table-actions">' +
+                  '<button class="btn btn-outline btn-sm" data-action="review-application" data-id="' +
+                    escapeHtml(application.applicationId) +
+                  '"><i class="fa-solid fa-eye"></i> ตรวจสอบ</button>' +
+                '</div>' +
+              '</td>' +
+            '</tr>'
+          );
+        }
+      );
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>จัดการคำขอสินเชื่อ</h2>' +
+            '<p>ตรวจสอบข้อมูลและบันทึกผลตามกระบวนการพิจารณา</p>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:17px">' +
+          '<i class="fa-solid fa-triangle-exclamation"></i> ' +
+          'ควรตรวจสอบความสามารถชำระหนี้ เอกสาร และเงื่อนไขทางกฎหมายก่อนอนุมัติทุกครั้ง ' +
+          'ระบบไม่ควรอนุมัติสินเชื่อจากข้อมูลที่ผู้สมัครกรอกเพียงอย่างเดียวโดยไม่มีการตรวจสอบตามกระบวนการที่เหมาะสม' +
+        '</div>' +
+
+        '<div class="card">' +
+
+          '<div class="table-toolbar">' +
+
+            '<div class="field">' +
+              '<label for="applicationStatusFilter">กรองสถานะ</label>' +
+              '<select id="applicationStatusFilter">' +
+                filterOption("ALL", "ทุกสถานะ", state.applicationStatusFilter) +
+                filterOption("SUBMITTED", "ส่งคำขอแล้ว", state.applicationStatusFilter) +
+                filterOption("UNDER_REVIEW", "กำลังตรวจสอบ", state.applicationStatusFilter) +
+                filterOption("NEED_MORE_INFO", "ต้องการข้อมูลเพิ่ม", state.applicationStatusFilter) +
+                filterOption("APPROVED", "อนุมัติแล้ว", state.applicationStatusFilter) +
+                filterOption("REJECTED", "ไม่อนุมัติ", state.applicationStatusFilter) +
+                filterOption("DISBURSED", "จ่ายเงินแล้ว", state.applicationStatusFilter) +
+              '</select>' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="applicationSearch">ค้นหาในรายการหน้านี้</label>' +
+              '<input id="applicationSearch" type="search" placeholder="เลขที่คำขอ ชื่อ หรืออีเมล">' +
+            '</div>' +
+
+            '<button class="btn btn-secondary" data-action="refresh-applications">' +
+              '<i class="fa-solid fa-rotate"></i> รีเฟรช' +
+            '</button>' +
+
+          '</div>' +
+
+          '<div id="applicationTable">' +
+            renderDataTable(
+              [
+                "เลขที่คำขอ",
+                "ผู้สมัคร",
+                "วงเงิน",
+                "ระยะเวลา",
+                "สถานะ",
+                "วันที่",
+                "ดำเนินการ"
+              ],
+              rows
+            ) +
+          '</div>' +
+
+          '<div class="pagination">' +
+            '<button class="btn btn-secondary btn-sm" data-action="application-prev" ' +
+              (state.applicationPage <= 1 ? "disabled" : "") +
+            '><i class="fa-solid fa-chevron-left"></i> ก่อนหน้า</button>' +
+            '<span class="small muted">หน้า ' + state.applicationPage + '</span>' +
+            '<button class="btn btn-secondary btn-sm" data-action="application-next" ' +
+              (state.applications.length < 50 ? "disabled" : "") +
+            '>ถัดไป <i class="fa-solid fa-chevron-right"></i></button>' +
+          '</div>' +
+
+        '</div>';
+
+      $("#applicationStatusFilter").addEventListener("change", async function () {
+        state.applicationStatusFilter = this.value;
+        state.applicationPage = 1;
+        await navigateTo("applications");
+      });
+
+      $("#applicationSearch").addEventListener("input", function () {
+        const search = this.value.trim().toLowerCase();
+
+        const filtered = state.applications.filter(function (application) {
+          const user = application.user || {};
+
+          return String(application.applicationId || "").toLowerCase().includes(search) ||
+            String(user.fullName || "").toLowerCase().includes(search) ||
+            String(user.email || "").toLowerCase().includes(search);
+        });
+
+        const filteredRows = filtered.map(function (application) {
+          const user = application.user || {};
+
+          return (
+            '<tr>' +
+              '<td>' + escapeHtml(application.applicationId) + '</td>' +
+              '<td><strong>' + escapeHtml(user.fullName || "ไม่พบข้อมูล") +
+                '</strong><div class="small muted">' +
+                escapeHtml(user.email || "") +
+              '</div></td>' +
+              '<td>' + formatMoney(application.requestedAmount) + ' บาท</td>' +
+              '<td>' + Number(application.requestedTermMonths || 0) + ' เดือน</td>' +
+              '<td>' + statusPill(application.status) + '</td>' +
+              '<td>' + formatDate(application.createdAt) + '</td>' +
+              '<td><button class="btn btn-outline btn-sm" data-action="review-application" data-id="' +
+                escapeHtml(application.applicationId) +
+              '">ตรวจสอบ</button></td>' +
+            '</tr>'
+          );
+        });
+
+        $("#applicationTable").innerHTML = renderDataTable(
+          [
+            "เลขที่คำขอ",
+            "ผู้สมัคร",
+            "วงเงิน",
+            "ระยะเวลา",
+            "สถานะ",
+            "วันที่",
+            "ดำเนินการ"
+          ],
+          filteredRows
+        );
+      });
+    }
+
+    function filterOption(value, label, selected) {
+      return (
+        '<option value="' + escapeHtml(value) + '"' +
+          (value === selected ? " selected" : "") +
+        '>' + escapeHtml(label) + '</option>'
+      );
+    }
+
+    function findCurrentApplication(applicationId) {
+      return state.applications.find(function (application) {
+        return application.applicationId === applicationId;
+      });
+    }
+
+    async function openApplicationReview(applicationId) {
+      let application = findCurrentApplication(applicationId);
+
+      /*
+       * The current page may be paginated. Load the first matching
+       * record through a new list request if it is not in memory.
+       */
+      if (!application) {
+        const result = await api(
+          "adminListApplications",
+          {
+            status: "ALL",
+            page: 1,
+            pageSize: 100
+          }
+        );
+
+        application = (result.records || []).find(function (item) {
+          return item.applicationId === applicationId;
+        });
+      }
+
+      if (!application) {
+        showMessageModal(
+          "ไม่พบคำขอ",
+          "คำขอนี้อาจถูกลบหรือไม่มีสิทธิ์ดู",
+          "error"
+        );
+
+        return;
+      }
+
+      state.selectedApplicationId = applicationId;
+
+      const user = application.user || {};
+
+      showModal({
+        title: "ตรวจสอบคำขอสินเชื่อ",
+        large: true,
+
+        body:
+          '<div class="alert-box warning" style="margin-bottom:15px">' +
+            'บันทึกการตัดสินใจตามหลักเกณฑ์ของผู้ให้สินเชื่อที่เกี่ยวข้อง ' +
+            'การเปลี่ยนสถานะในหน้านี้ไม่ได้เป็นการตรวจสอบเอกสารแทนเจ้าหน้าที่' +
+          '</div>' +
+
+          '<div class="grid grid-2" style="margin-bottom:18px">' +
+
+            '<div class="card">' +
+              '<div class="card-title">ข้อมูลผู้สมัคร</div>' +
+              '<div class="data-list">' +
+                dataRow("เลขที่คำขอ", application.applicationId) +
+                dataRow("ชื่อ", [user.prefix || "", user.fullName || ""].join(" ")) +
+                dataRow("อีเมล", user.email || "") +
+                dataRow("โทรศัพท์", user.phone || "") +
+                dataRow("สถานะบัญชี", user.status || "") +
+              '</div>' +
+            '</div>' +
+
+            '<div class="card">' +
+              '<div class="card-title">ข้อมูลคำขอ</div>' +
+              '<div class="data-list">' +
+                dataRow("วงเงินที่ขอ", formatMoney(application.requestedAmount) + " บาท") +
+                dataRow("ระยะเวลา", Number(application.requestedTermMonths || 0) + " เดือน") +
+                dataRow("รายได้", formatMoney(application.monthlyIncome) + " บาท/เดือน") +
+                dataRow("ค่าใช้จ่าย", formatMoney(application.monthlyExpenses) + " บาท/เดือน") +
+                dataRow("ภาระหนี้เดิม", formatMoney(application.existingMonthlyDebt) + " บาท/เดือน") +
+                dataRow("อาชีพ", application.employmentType || "—") +
+                dataRow("วัตถุประสงค์", application.purpose || "—") +
+              '</div>' +
+            '</div>' +
+
+          '</div>' +
+
+          '<form id="applicationReviewForm" class="form-grid">' +
+
+            '<div class="field span-2">' +
+              '<label for="reviewStatus">ผลการดำเนินการ</label>' +
+              '<select id="reviewStatus" required>' +
+                filterOption("UNDER_REVIEW", "กำลังตรวจสอบ", "UNDER_REVIEW") +
+                filterOption("NEED_MORE_INFO", "ขอข้อมูลเพิ่มเติม", "UNDER_REVIEW") +
+                filterOption("APPROVED", "อนุมัติ", "UNDER_REVIEW") +
+                filterOption("REJECTED", "ไม่อนุมัติ", "UNDER_REVIEW") +
+              '</select>' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="reviewApprovedAmount">วงเงินที่อนุมัติ (บาท)</label>' +
+              '<input id="reviewApprovedAmount" type="number" min="1" step="100" value="' +
+                Number(application.approvedAmount || application.requestedAmount || 0) +
+              '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="reviewApprovedTerm">ระยะเวลาที่อนุมัติ (เดือน)</label>' +
+              '<input id="reviewApprovedTerm" type="number" min="1" step="1" value="' +
+                Number(application.approvedTermMonths || application.requestedTermMonths || 1) +
+              '">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="reviewReason">เหตุผลหรือหมายเหตุ</label>' +
+              '<textarea id="reviewReason" maxlength="2000" placeholder="จำเป็นสำหรับการขอข้อมูลเพิ่มเติมหรือปฏิเสธคำขอ">' +
+                escapeHtml(application.decisionReason || "") +
+              '</textarea>' +
+            '</div>' +
+
+          '</form>' +
+
+          '<div class="alert-box" style="margin-top:15px">' +
+            '<strong>สถานะปัจจุบัน:</strong> ' +
+            statusPill(application.status) +
+            '<br><span class="small">การอนุมัติจะยังไม่จ่ายเงิน และต้องมีขั้นตอนสัญญาและการจ่ายเงินจริงแยกต่างหาก</span>' +
+          '</div>',
+
+        buttons: [
+          {
+            label: "ปิด",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "บันทึกผล",
+            className: "btn-primary",
+            icon: "fa-solid fa-floppy-disk",
+            onClick: submitApplicationReview
+          }
+        ]
+      });
+
+      const statusSelect = $("#reviewStatus");
+
+      function updateApprovalFields() {
+        const isApproved = statusSelect.value === "APPROVED";
+
+        $("#reviewApprovedAmount").disabled = !isApproved;
+        $("#reviewApprovedTerm").disabled = !isApproved;
+
+        $("#reviewReason").placeholder =
+          statusSelect.value === "REJECTED" ||
+          statusSelect.value === "NEED_MORE_INFO"
+            ? "กรุณาระบุเหตุผลประกอบการดำเนินการ"
+            : "หมายเหตุเพิ่มเติม (ถ้ามี)";
+      }
+
+      statusSelect.addEventListener("change", updateApprovalFields);
+
+      updateApprovalFields();
+    }
+
+    function dataRow(label, value) {
+      return (
+        '<div class="data-row">' +
+          '<span>' + escapeHtml(label) + '</span>' +
+          '<span>' + escapeHtml(value || "—") + '</span>' +
+        '</div>'
+      );
+    }
+
+    async function submitApplicationReview(button) {
+      const applicationId = state.selectedApplicationId;
+
+      const status = $("#reviewStatus").value;
+      const decisionReason = $("#reviewReason").value.trim();
+
+      const payload = {
+        applicationId: applicationId,
+        status: status,
+        decisionReason: decisionReason
+      };
+
+      if (
+        status === "APPROVED"
+      ) {
+        payload.approvedAmount = Number(
+          $("#reviewApprovedAmount").value
+        );
+
+        payload.approvedTermMonths = Number(
+          $("#reviewApprovedTerm").value
+        );
+
+        if (
+          !Number.isFinite(payload.approvedAmount) ||
+          payload.approvedAmount <= 0 ||
+          !Number.isInteger(payload.approvedTermMonths) ||
+          payload.approvedTermMonths < 1
+        ) {
+          showToast("กรุณาตรวจสอบวงเงินและระยะเวลาที่อนุมัติ", "error");
+          return;
+        }
+      }
+
+      if (
+        (
+          status === "REJECTED" ||
+          status === "NEED_MORE_INFO"
+        ) &&
+        !decisionReason
+      ) {
+        showToast("กรุณาระบุเหตุผลประกอบการดำเนินการ", "error");
+        return;
+      }
+
+      setButtonLoading(button, true, "กำลังบันทึก...");
+
+      try {
+        await withLoading(
+          "กำลังบันทึกผลการพิจารณา",
+          async function () {
+            return await api(
+              "adminUpdateApplicationStatus",
+              payload
+            );
+          }
+        );
+
+        closeModal();
+
+        showToast("บันทึกผลการพิจารณาแล้ว", "success");
+
+        await navigateTo("applications");
+
+      } catch (error) {
+        showMessageModal(
+          "บันทึกผลไม่สำเร็จ",
+          error.message,
+          "error"
+        );
+
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+
+    /* =====================================================
+       13. USERS
+       ===================================================== */
+
+    async function renderUsers() {
+      const result = await api(
+        "adminListUsers",
+        {
+          page: state.userPage,
+          pageSize: 50,
+          search: state.userSearch
+        }
+      );
+
+      state.users = result.records || [];
+
+      const rows = state.users.map(function (user) {
+        return (
+          '<tr>' +
+            '<td>' +
+              '<strong>' + escapeHtml(user.fullName || "—") + '</strong>' +
+              '<div class="small muted">' + escapeHtml(user.username || "") + '</div>' +
+            '</td>' +
+            '<td>' + escapeHtml(user.email || "") + '</td>' +
+            '<td>' + escapeHtml(user.phone || "") + '</td>' +
+            '<td>' +
+              (
+                user.emailVerifiedAt
+                  ? '<span class="status-pill success">ยืนยันแล้ว</span>'
+                  : '<span class="status-pill warning">ยังไม่ยืนยัน</span>'
+              ) +
+            '</td>' +
+            '<td>' + statusPill(user.status) + '</td>' +
+            '<td>' + formatDate(user.createdAt) + '</td>' +
+            '<td>' +
+              '<button class="btn btn-outline btn-sm" data-action="view-user" data-id="' +
+                escapeHtml(user.userId) +
+              '"><i class="fa-solid fa-eye"></i> รายละเอียด</button>' +
+            '</td>' +
+          '</tr>'
+        );
+      });
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>จัดการลูกค้า</h2>' +
+            '<p>ค้นหาและตรวจสอบข้อมูลบัญชีลูกค้าที่ลงทะเบียนใน FINORA</p>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:17px">' +
+          '<i class="fa-solid fa-shield-halved"></i> ' +
+          'ข้อมูลบุคคลและข้อมูลการเงินเป็นข้อมูลที่ต้องควบคุมการเข้าถึง ' +
+          'โปรดเปิดดูเฉพาะเท่าที่จำเป็นต่อการปฏิบัติหน้าที่' +
+        '</div>' +
+
+        '<div class="card">' +
+
+          '<div class="table-toolbar">' +
+            '<div class="field">' +
+              '<label for="userSearch">ค้นหาลูกค้า</label>' +
+              '<input id="userSearch" type="search" value="' +
+                escapeHtml(state.userSearch) +
+              '" placeholder="ชื่อ อีเมล โทรศัพท์ หรือรหัสผู้ใช้">' +
+            '</div>' +
+
+            '<button class="btn btn-secondary" data-action="search-users">' +
+              '<i class="fa-solid fa-magnifying-glass"></i> ค้นหา' +
+            '</button>' +
+
+            '<button class="btn btn-outline" data-action="clear-user-search">' +
+              'ล้างการค้นหา' +
+            '</button>' +
+          '</div>' +
+
+          '<div class="small muted" style="margin-bottom:12px">' +
+            'รายการทั้งหมดที่ตรงกับการค้นหา: ' +
+            Number(result.total || 0).toLocaleString("th-TH") +
+          '</div>' +
+
+          renderDataTable(
+            [
+              "ชื่อลูกค้า",
+              "อีเมล",
+              "โทรศัพท์",
+              "สถานะอีเมล",
+              "สถานะบัญชี",
+              "วันที่สมัคร",
+              "ดำเนินการ"
+            ],
+            rows
+          ) +
+
+          '<div class="pagination">' +
+            '<button class="btn btn-secondary btn-sm" data-action="user-prev" ' +
+              (state.userPage <= 1 ? "disabled" : "") +
+            '>ก่อนหน้า</button>' +
+            '<span class="small muted">หน้า ' + state.userPage + '</span>' +
+            '<button class="btn btn-secondary btn-sm" data-action="user-next" ' +
+              (state.users.length < 50 ? "disabled" : "") +
+            '>ถัดไป</button>' +
+          '</div>' +
+
+        '</div>';
+
+      $("#userSearch").addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+
+          state.userSearch = this.value.trim();
+          state.userPage = 1;
+
+          navigateTo("users");
+        }
+      });
+    }
+
+    async function viewUserDetails(userId) {
+      const result = await api(
+        "adminGetUser",
+        {
+          userId: userId
+        }
+      );
+
+      const user = result.user || {};
+
+      const applications = result.applications || [];
+      const accounts = result.loanAccounts || [];
+
+      const appRows = applications.map(function (application) {
+        return (
+          '<tr>' +
+            '<td>' + escapeHtml(application.applicationId) + '</td>' +
+            '<td>' + formatMoney(application.requestedAmount) + ' บาท</td>' +
+            '<td>' + statusPill(application.status) + '</td>' +
+            '<td>' + formatDate(application.createdAt) + '</td>' +
+          '</tr>'
+        );
+      });
+
+      const accountRows = accounts.map(function (account) {
+        return (
+          '<tr>' +
+            '<td>' + escapeHtml(account.loanAccountId) + '</td>' +
+            '<td>' + formatMoney(account.principalAmount) + '</td>' +
+            '<td>' + formatMoney(account.outstandingPrincipal) + '</td>' +
+            '<td>' + statusPill(account.status) + '</td>' +
+          '</tr>'
+        );
+      });
+
+      showModal({
+        title: "รายละเอียดลูกค้า",
+        large: true,
+        body:
+          '<div class="grid grid-2" style="margin-bottom:18px">' +
+            '<div class="card">' +
+              '<div class="card-title">ข้อมูลบัญชี</div>' +
+              '<div class="data-list">' +
+                dataRow("รหัสผู้ใช้", user.userId) +
+                dataRow("Username", user.username) +
+                dataRow("คำนำหน้า", user.prefix) +
+                dataRow("ชื่อ - สกุล", user.fullName) +
+                dataRow("วันเกิด", formatDate(user.birthDate)) +
+                dataRow("อีเมล", user.email) +
+                dataRow("โทรศัพท์", user.phone) +
+                dataRow("สถานะบัญชี", user.status) +
+                dataRow("ยืนยันอีเมล", formatDateTime(user.emailVerifiedAt)) +
+                dataRow("วันที่สมัคร", formatDateTime(user.createdAt)) +
+              '</div>' +
+            '</div>' +
+
+            '<div class="card">' +
+              '<div class="card-title">สรุปข้อมูลสินเชื่อ</div>' +
+              '<div class="data-list">' +
+                dataRow("จำนวนคำขอ", applications.length) +
+                dataRow("บัญชีสินเชื่อ", accounts.length) +
+                dataRow(
+                  "เงินต้นคงเหลือรวม",
+                  formatMoney(
+                    accounts.reduce(function (sum, item) {
+                      return sum + Number(item.outstandingPrincipal || 0);
+                    }, 0)
+                  ) + " บาท"
+                ) +
+              '</div>' +
+              '<div class="alert-box warning" style="margin-top:15px">' +
+                'หมายเลขบัตรประชาชนฉบับเต็มไม่แสดงในหน้ารายละเอียดนี้' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card" style="margin-bottom:16px">' +
+            '<div class="card-title">คำขอสินเชื่อ</div>' +
+            renderDataTable(
+              ["เลขที่คำขอ", "วงเงิน", "สถานะ", "วันที่"],
+              appRows
+            ) +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="card-title">บัญชีสินเชื่อ</div>' +
+            renderDataTable(
+              ["บัญชีสินเชื่อ", "เงินต้นเริ่มต้น", "เงินต้นคงเหลือ", "สถานะ"],
+              accountRows
+            ) +
+          '</div>',
+        buttons: [
+          {
+            label: "ปิด",
+            className: "btn-primary",
+            onClick: closeModal
+          }
+        ]
+      });
+    }
+
+
+    /* =====================================================
+       14. PRODUCTS
+       ===================================================== */
+
+    async function renderProducts() {
+      const products = await api("adminListProducts");
+
+      state.products = products || [];
+
+      const rows = state.products.map(function (product) {
+        return (
+          '<tr>' +
+            '<td>' +
+              '<strong>' + escapeHtml(product.productName) + '</strong>' +
+              '<div class="small muted">' + escapeHtml(product.productId) + '</div>' +
+            '</td>' +
+            '<td>' + formatMoney(product.minAmount) + '</td>' +
+            '<td>' + formatMoney(product.maxAmount) + '</td>' +
+            '<td>' + Number(product.annualInterestRate || 0).toFixed(2) + '%</td>' +
+            '<td>' + Number(product.minTermMonths || 1) + '–' +
+              Number(product.maxTermMonths || 1) + ' เดือน</td>' +
+            '<td>' +
+              (
+                product.complianceReviewed
+                  ? '<span class="status-pill success">ตรวจสอบแล้ว</span>'
+                  : '<span class="status-pill warning">ยังไม่ตรวจสอบ</span>'
+              ) +
+            '</td>' +
+            '<td>' +
+              (
+                product.active
+                  ? '<span class="status-pill success">เปิดใช้งาน</span>'
+                  : '<span class="status-pill neutral">ปิดใช้งาน</span>'
+              ) +
+            '</td>' +
+            '<td>' +
+              '<button class="btn btn-outline btn-sm" data-action="edit-product" data-id="' +
+                escapeHtml(product.productId) +
+              '"><i class="fa-solid fa-pen"></i> แก้ไข</button>' +
+            '</td>' +
+          '</tr>'
+        );
+      });
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>ผลิตภัณฑ์สินเชื่อ</h2>' +
+            '<p>กำหนดวงเงิน ระยะเวลา และอัตราดอกเบี้ยที่ระบบใช้แสดง</p>' +
+          '</div>' +
+          '<button class="btn btn-primary" data-action="new-product">' +
+            '<i class="fa-solid fa-plus"></i> เพิ่มผลิตภัณฑ์' +
+          '</button>' +
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:17px">' +
+          '<i class="fa-solid fa-scale-balanced"></i> ' +
+          'อัตราดอกเบี้ย ค่าธรรมเนียม และเงื่อนไขต้องได้รับการตรวจสอบตามกฎหมายและประเภทสินเชื่อจริงก่อนเปิดใช้งาน ' +
+          'การติ๊กสถานะตรวจสอบในหน้าเว็บไม่ใช่ใบอนุญาตประกอบธุรกิจ' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-title">' +
+            '<span>รายการผลิตภัณฑ์ทั้งหมด</span>' +
+            '<small>' + state.products.length + ' รายการ</small>' +
+          '</div>' +
+
+          renderDataTable(
+            [
+              "ผลิตภัณฑ์",
+              "วงเงินขั้นต่ำ",
+              "วงเงินสูงสุด",
+              "ดอกเบี้ย/ปี",
+              "ระยะเวลา",
+              "การตรวจสอบ",
+              "สถานะ",
+              "ดำเนินการ"
+            ],
+            rows
+          ) +
+        '</div>';
+    }
+
+    function openProductEditor(product) {
+      const editing = Boolean(product);
+
+      const item = product || {
+        productId: "",
+        productName: "",
+        description: "",
+        minAmount: 1000,
+        maxAmount: 10000,
+        annualInterestRate: 0,
+        effectiveAnnualRate: 0,
+        interestMethod: "REDUCING_BALANCE",
+        feeFlat: 0,
+        minTermMonths: 1,
+        maxTermMonths: 12,
+        complianceReviewed: false,
+        active: false
+      };
+
+      showModal({
+        title: editing ? "แก้ไขผลิตภัณฑ์" : "เพิ่มผลิตภัณฑ์",
+        large: true,
+        body:
+          '<form id="productForm" class="form-grid">' +
+
+            '<input type="hidden" id="productId" value="' +
+              escapeHtml(item.productId) +
+            '">' +
+
+            '<div class="field span-2">' +
+              '<label for="productName">ชื่อผลิตภัณฑ์</label>' +
+              '<input id="productName" maxlength="200" required value="' +
+                escapeHtml(item.productName) +
+              '">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="productDescription">รายละเอียด</label>' +
+              '<textarea id="productDescription" maxlength="2000">' +
+                escapeHtml(item.description || "") +
+              '</textarea>' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productMinAmount">วงเงินขั้นต่ำ (บาท)</label>' +
+              '<input id="productMinAmount" type="number" min="1" step="100" required value="' +
+                Number(item.minAmount || 0) +
+              '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productMaxAmount">วงเงินสูงสุด (บาท)</label>' +
+              '<input id="productMaxAmount" type="number" min="1" step="100" required value="' +
+                Number(item.maxAmount || 0) +
+              '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productAnnualRate">อัตราดอกเบี้ยต่อปี (%)</label>' +
+              '<input id="productAnnualRate" type="number" min="0" max="100" step="0.01" required value="' +
+                Number(item.annualInterestRate || 0) +
+              '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productEffectiveRate">อัตราดอกเบี้ยที่แท้จริง (%)</label>' +
+              '<input id="productEffectiveRate" type="number" min="0" max="100" step="0.01" required value="' +
+                Number(item.effectiveAnnualRate || 0) +
+              '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productInterestMethod">วิธีคำนวณดอกเบี้ย</label>' +
+              '<select id="productInterestMethod">' +
+                filterOption("FLAT", "Flat Rate", item.interestMethod) +
+                filterOption("REDUCING_BALANCE", "Reducing Balance", item.interestMethod) +
+              '</select>' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productFee">ค่าธรรมเนียมต่อสัญญา (บาท)</label>' +
+              '<input id="productFee" type="number" min="0" step="0.01" required value="' +
+                Number(item.feeFlat || 0) +
+              '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productMinTerm">ระยะเวลาขั้นต่ำ (เดือน)</label>' +
+              '<input id="productMinTerm" type="number" min="1" max="600" required value="' +
+                Number(item.minTermMonths || 1) +
+              '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="productMaxTerm">ระยะเวลาสูงสุด (เดือน)</label>' +
+              '<input id="productMaxTerm" type="number" min="1" max="600" required value="' +
+                Number(item.maxTermMonths || 1) +
+              '">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label class="check-row">' +
+                '<input id="productComplianceReviewed" type="checkbox" ' +
+                  (item.complianceReviewed ? "checked" : "") +
+                '>' +
+                '<span>ยืนยันว่าผลิตภัณฑ์ผ่านการตรวจสอบตามกระบวนการขององค์กรแล้ว</span>' +
+              '</label>' +
+              '<label class="check-row" style="margin-top:9px">' +
+                '<input id="productActive" type="checkbox" ' +
+                  (item.active ? "checked" : "") +
+                '>' +
+                '<span>เปิดให้แสดงและใช้งานผลิตภัณฑ์นี้</span>' +
+              '</label>' +
+            '</div>' +
+
+            '<div class="span-2 alert-box warning">' +
+              'หากเปิดใช้งาน ระบบจะต้องมีสถานะตรวจสอบผลิตภัณฑ์แล้ว และอัตราดอกเบี้ย/ค่าธรรมเนียมต้องตรงกับเงื่อนไขที่ได้รับอนุญาต' +
+            '</div>' +
+
+          '</form>',
+        buttons: [
+          {
+            label: "ยกเลิก",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "บันทึกผลิตภัณฑ์",
+            className: "btn-primary",
+            icon: "fa-solid fa-floppy-disk",
+            onClick: submitProductForm
+          }
+        ]
+      });
+    }
+
+    async function submitProductForm(button) {
+      const form = $("#productForm");
+
+      if (!form || !form.reportValidity()) {
+        return;
+      }
+
+      const payload = {
+        productId: $("#productId").value,
+        productName: $("#productName").value.trim(),
+        description: $("#productDescription").value.trim(),
+        minAmount: Number($("#productMinAmount").value),
+        maxAmount: Number($("#productMaxAmount").value),
+        annualInterestRate: Number($("#productAnnualRate").value),
+        effectiveAnnualRate: Number($("#productEffectiveRate").value),
+        interestMethod: $("#productInterestMethod").value,
+        feeFlat: Number($("#productFee").value),
+        minTermMonths: Number($("#productMinTerm").value),
+        maxTermMonths: Number($("#productMaxTerm").value),
+        complianceReviewed: $("#productComplianceReviewed").checked,
+        active: $("#productActive").checked
+      };
+
+      setButtonLoading(button, true, "กำลังบันทึก...");
+
+      try {
+        await withLoading(
+          "กำลังบันทึกผลิตภัณฑ์สินเชื่อ",
+          async function () {
+            return await api("adminSaveProduct", payload);
+          }
+        );
+
+        closeModal();
+
+        showToast("บันทึกผลิตภัณฑ์แล้ว", "success");
+
+        await navigateTo("products");
+
+      } catch (error) {
+        showMessageModal(
+          "บันทึกผลิตภัณฑ์ไม่สำเร็จ",
+          error.message,
+          "error"
+        );
+
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+
+    /* =====================================================
+       15. CONTRACTS AND DISBURSEMENT
+       ===================================================== */
+
+    async function renderContracts() {
+      const result = await api(
+        "adminListApplications",
+        {
+          status: "ALL",
+          page: 1,
+          pageSize: 100
+        }
+      );
+
+      state.applications = result.records || [];
+
+      const rows = state.applications.map(function (application) {
+        const accepted = Boolean(application.offerAcceptedAt);
+
+        const canRecordContract =
+          application.status === "APPROVED" &&
+          accepted;
+
+        const canActivate =
+          application.status === "APPROVED" &&
+          accepted;
+
+        return (
+          '<tr>' +
+            '<td>' + escapeHtml(application.applicationId) + '</td>' +
+            '<td>' +
+              escapeHtml(
+                application.user && application.user.fullName
+                  ? application.user.fullName
+                  : "ไม่พบข้อมูล"
+              ) +
+            '</td>' +
+            '<td>' + formatMoney(application.approvedAmount || 0) + ' บาท</td>' +
+            '<td>' + statusPill(application.status) + '</td>' +
+            '<td>' +
+              (
+                accepted
+                  ? '<span class="status-pill success">ยอมรับข้อเสนอแล้ว</span>'
+                  : '<span class="status-pill warning">รอผู้กู้ยอมรับข้อเสนอ</span>'
+              ) +
+            '</td>' +
+            '<td>' +
+              '<div class="table-actions">' +
+                (
+                  canRecordContract
+                    ? '<button class="btn btn-outline btn-sm" data-action="record-contract" data-id="' +
+                        escapeHtml(application.applicationId) +
+                      '">บันทึกสัญญา</button>'
+                    : '<button class="btn btn-outline btn-sm" disabled>บันทึกสัญญา</button>'
+                ) +
+                (
+                  canActivate
+                    ? '<button class="btn btn-primary btn-sm" data-action="activate-loan" data-id="' +
+                        escapeHtml(application.applicationId) +
+                      '">เปิดบัญชี</button>'
+                    : ''
+                ) +
+              '</div>' +
+            '</td>' +
+          '</tr>'
+        );
+      });
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>สัญญาและการจ่ายเงิน</h2>' +
+            '<p>จัดการหลักฐานสัญญาและบันทึกการเปิดบัญชีสินเชื่อ</p>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:17px">' +
+          '<i class="fa-solid fa-triangle-exclamation"></i> ' +
+          '<strong>สำคัญ:</strong> เมนูนี้เป็นการบันทึกผลของกระบวนการที่เกิดขึ้นแล้ว ' +
+          'ไม่ได้สร้างลายเซ็นอิเล็กทรอนิกส์ที่มีผลทางกฎหมายโดยตัวมันเอง ' +
+          'และไม่ได้โอนเงินจริง การเปิดบัญชีต้องยืนยันการลงนามและการจ่ายเงินจริงก่อนเท่านั้น' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-title">' +
+            '<span>คำขอที่เกี่ยวข้องกับขั้นตอนสัญญา</span>' +
+            '<small>' + state.applications.length + ' รายการที่ตรวจสอบ</small>' +
+          '</div>' +
+          renderDataTable(
+            [
+              "เลขที่คำขอ",
+              "ผู้สมัคร",
+              "วงเงินที่อนุมัติ",
+              "สถานะ",
+              "การยอมรับข้อเสนอ",
+              "ดำเนินการ"
+            ],
+            rows
+          ) +
+        '</div>';
+    }
+
+    async function openContractRecordModal(applicationId) {
+      const application = state.applications.find(function (item) {
+        return item.applicationId === applicationId;
+      });
+
+      if (!application) {
+        showToast("ไม่พบคำขอสินเชื่อ", "error");
+        return;
+      }
+
+      showModal({
+        title: "บันทึกหลักฐานสัญญา",
+        body:
+          '<div class="alert-box warning" style="margin-bottom:15px">' +
+            'ต้องตรวจสอบลายเซ็นและหลักฐานสัญญาจริงก่อนบันทึก ' +
+            'การกดปุ่มนี้ไม่ใช่การลงนามแทนผู้กู้' +
+          '</div>' +
+
+          '<form id="contractRecordForm" class="form-grid">' +
+
+            '<div class="field span-2">' +
+              '<label>เลขที่คำขอ</label>' +
+              '<input disabled value="' + escapeHtml(applicationId) + '">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="contractVersion">เวอร์ชันสัญญา</label>' +
+              '<input id="contractVersion" maxlength="100" required placeholder="เช่น TERMS-2026-10">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="signatureProviderRef">รหัสอ้างอิงหลักฐานลายเซ็น</label>' +
+              '<input id="signatureProviderRef" maxlength="250" required placeholder="รหัสจากผู้ให้บริการลงนามหรือระบบหลักฐาน">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="signedDocumentUrl">URL เอกสารลงนามแล้ว (HTTPS)</label>' +
+              '<input id="signedDocumentUrl" type="url" placeholder="https://...">' +
+              '<div class="field-hint">อย่าใช้ URL ที่เปิดเอกสารสัญญาส่วนบุคคลแก่สาธารณะโดยไม่มีการควบคุมสิทธิ์</div>' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="contractSignedAt">วันและเวลาที่ลงนาม</label>' +
+              '<input id="contractSignedAt" type="datetime-local" required>' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label class="check-row">' +
+                '<input id="confirmSignatureVerified" type="checkbox" required>' +
+                '<span>ข้าพเจ้ายืนยันว่าได้ตรวจสอบหลักฐานการลงนามและเอกสารต้นฉบับแล้วจริง</span>' +
+              '</label>' +
+            '</div>' +
+
+          '</form>',
+        buttons: [
+          {
+            label: "ยกเลิก",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "บันทึกสัญญา",
+            className: "btn-primary",
+            onClick: submitContractRecord
+          }
+        ]
+      });
+
+      const now = new Date();
+
+      const localDateTime = new Date(
+        now.getTime() - now.getTimezoneOffset() * 60000
+      ).toISOString().slice(0, 16);
+
+      $("#contractSignedAt").value = localDateTime;
+    }
+
+    async function submitContractRecord(button) {
+      const form = $("#contractRecordForm");
+
+      if (!form || !form.reportValidity()) {
+        return;
+      }
+
+      const documentUrl = $("#signedDocumentUrl").value.trim();
+
+      if (
+        documentUrl &&
+        !/^https:\/\//i.test(documentUrl)
+      ) {
+        showToast("URL เอกสารต้องใช้ HTTPS", "error");
+        return;
+      }
+
+      const payload = {
+        applicationId: state.selectedApplicationId,
+        contractVersion: $("#contractVersion").value.trim(),
+        signatureProviderRef: $("#signatureProviderRef").value.trim(),
+        signedDocumentUrl: documentUrl,
+        signedAt: new Date(
+          $("#contractSignedAt").value
+        ).toISOString(),
+        confirmSignatureVerified:
+          $("#confirmSignatureVerified").checked
+      };
+
+      setButtonLoading(button, true, "กำลังบันทึก...");
+
+      try {
+        await withLoading(
+          "กำลังบันทึกหลักฐานสัญญา",
+          async function () {
+            return await api("adminRecordContractSignature", payload);
+          }
+        );
+
+        closeModal();
+
+        showToast("บันทึกหลักฐานสัญญาแล้ว", "success");
+
+        await navigateTo("contracts");
+
+      } catch (error) {
+        showMessageModal(
+          "บันทึกสัญญาไม่สำเร็จ",
+          error.message,
+          "error"
+        );
+
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+    async function openActivateLoanModal(applicationId) {
+      const application = state.applications.find(function (item) {
+        return item.applicationId === applicationId;
+      });
+
+      if (!application) {
+        showToast("ไม่พบคำขอสินเชื่อ", "error");
+        return;
+      }
+
+      showModal({
+        title: "เปิดบัญชีสินเชื่อหลังจ่ายเงินจริง",
+        body:
+          '<div class="alert-box danger" style="margin-bottom:16px">' +
+            '<strong>ยืนยันก่อนดำเนินการ:</strong> ' +
+            'ขั้นตอนนี้บันทึกธุรกรรมว่าได้จ่ายเงินแล้วในระบบ ' +
+            'ห้ามดำเนินการหากยังไม่ได้ตรวจสอบหลักฐานการโอนเงินจริง' +
+          '</div>' +
+
+          '<form id="activateLoanForm" class="form-grid">' +
+
+            '<div class="field span-2">' +
+              '<label>เลขที่คำขอ</label>' +
+              '<input disabled value="' + escapeHtml(applicationId) + '">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label>วงเงินอนุมัติ</label>' +
+              '<input disabled value="' +
+                formatMoney(application.approvedAmount) +
+              ' บาท">' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label>จำนวนงวด</label>' +
+              '<input disabled value="' +
+                Number(application.approvedTermMonths || 0) +
+              ' เดือน">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="disbursementRef">รหัสอ้างอิงการโอนเงินจริง</label>' +
+              '<input id="disbursementRef" maxlength="250" required placeholder="เลขอ้างอิงจากธนาคารหรือผู้ให้บริการโอน">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="firstDueDate">วันครบกำหนดงวดแรก</label>' +
+              '<input id="firstDueDate" type="date" required>' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label class="check-row">' +
+                '<input id="disbursementConfirmed" type="checkbox" required>' +
+                '<span>ข้าพเจ้ายืนยันว่าเงินได้ถูกโอนถึงผู้กู้จริง และตรวจสอบหลักฐานจากแหล่งที่เชื่อถือได้แล้ว</span>' +
+              '</label>' +
+            '</div>' +
+
+          '</form>',
+        buttons: [
+          {
+            label: "ยกเลิก",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "ยืนยันเปิดบัญชี",
+            className: "btn-primary",
+            onClick: submitActivateLoan
+          }
+        ]
+      });
+
+      const firstDue = new Date();
+      firstDue.setMonth(firstDue.getMonth() + 1);
+
+      $("#firstDueDate").value =
+        firstDue.getFullYear() + "-" +
+        String(firstDue.getMonth() + 1).padStart(2, "0") + "-" +
+        String(firstDue.getDate()).padStart(2, "0");
+    }
+
+    async function submitActivateLoan(button) {
+      const form = $("#activateLoanForm");
+
+      if (!form || !form.reportValidity()) {
+        return;
+      }
+
+      if (!$("#disbursementConfirmed").checked) {
+        showToast("กรุณายืนยันการจ่ายเงินจริง", "error");
+        return;
+      }
+
+      const payload = {
+        applicationId: state.selectedApplicationId,
+        disbursementRef: $("#disbursementRef").value.trim(),
+        firstDueDate: $("#firstDueDate").value,
+        disbursementConfirmed: true
+      };
+
+      setButtonLoading(button, true, "กำลังเปิดบัญชี...");
+
+      try {
+        const result = await withLoading(
+          "กำลังเปิดบัญชีสินเชื่อและสร้างตารางชำระ",
+          async function () {
+            return await api("adminActivateLoan", payload);
+          }
+        );
+
+        closeModal();
+
+        showModal({
+          title: "เปิดบัญชีสินเชื่อสำเร็จ",
+          body:
+            '<div class="text-center">' +
+              '<div style="font-size:44px;color:#0F9F77;margin-bottom:12px">' +
+                '<i class="fa-solid fa-circle-check"></i>' +
+              '</div>' +
+              '<p>สร้างบัญชีสินเชื่อแล้ว</p>' +
+              '<div class="data-list" style="text-align:left">' +
+                dataRow("เลขที่บัญชี", result.loanAccountId) +
+                dataRow("เงินต้น", formatMoney(result.principalAmount) + " บาท") +
+                dataRow("ยอดตามตารางชำระ", formatMoney(result.totalAmountDue) + " บาท") +
+                dataRow("จำนวนงวด", result.scheduleCount + " งวด") +
+              '</div>' +
+              '<div class="alert-box warning" style="margin-top:15px">' +
+                'โปรดตรวจสอบตารางชำระและกระทบยอดธุรกรรมกับหลักฐานการโอนจริงอีกครั้ง' +
+              '</div>' +
+            '</div>',
+          buttons: [
+            {
+              label: "ตกลง",
+              className: "btn-primary",
+              onClick: closeModal
+            }
+          ]
+        });
+
+        await navigateTo("contracts");
+
+      } catch (error) {
+        showMessageModal(
+          "เปิดบัญชีไม่สำเร็จ",
+          error.message,
+          "error"
+        );
+
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+
+    /* =====================================================
+       16. REPAYMENTS
+       ===================================================== */
+
+    async function renderRepayments() {
+      const records = await api(
+        "adminListRepayments",
+        {
+          status: "ALL"
+        }
+      );
+
+      state.repayments = records || [];
+
+      const overdue = state.repayments.filter(function (record) {
+        return record.status !== "PAID" &&
+          record.dueDate &&
+          new Date(record.dueDate).getTime() < Date.now();
+      });
+
+      const rows = state.repayments.map(function (record) {
+        return (
+          '<tr>' +
+            '<td>' + escapeHtml(record.scheduleId) + '</td>' +
+            '<td>' + escapeHtml(record.loanAccountId) + '</td>' +
+            '<td>' +
+              escapeHtml(
+                record.user && record.user.fullName
+                  ? record.user.fullName
+                  : "ไม่พบข้อมูล"
+              ) +
+            '</td>' +
+            '<td>' + formatDate(record.dueDate) + '</td>' +
+            '<td>' + formatMoney(record.amountDue) + ' บาท</td>' +
+            '<td>' + formatMoney(record.amountPaid) + ' บาท</td>' +
+            '<td>' +
+              formatMoney(
+                Math.max(
+                  0,
+                  Number(record.amountDue || 0) -
+                  Number(record.amountPaid || 0)
+                )
+              ) +
+            ' บาท</td>' +
+            '<td>' + statusPill(record.status) + '</td>' +
+          '</tr>'
+        );
+      });
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>ตารางชำระเงิน</h2>' +
+            '<p>ติดตามกำหนดชำระตามบัญชีสินเชื่อ</p>' +
+          '</div>' +
+          '<button class="btn btn-secondary" data-action="refresh-repayments">' +
+            '<i class="fa-solid fa-rotate"></i> รีเฟรช' +
+          '</button>' +
+        '</div>' +
+
+        '<div class="grid grid-3" style="margin-bottom:17px">' +
+
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon"><i class="fa-solid fa-calendar"></i></div>' +
+              '<div>' +
+                '<div class="metric-label">งวดทั้งหมดที่แสดง</div>' +
+                '<div class="metric-value">' + state.repayments.length + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon teal"><i class="fa-solid fa-check"></i></div>' +
+              '<div>' +
+                '<div class="metric-label">งวดที่ชำระแล้ว</div>' +
+                '<div class="metric-value">' +
+                  state.repayments.filter(function (item) {
+                    return item.status === "PAID";
+                  }).length +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon amber"><i class="fa-solid fa-clock"></i></div>' +
+              '<div>' +
+                '<div class="metric-label">งวดเลยกำหนด (ตามวันที่)</div>' +
+                '<div class="metric-value">' + overdue.length + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:17px">' +
+          'รายการที่เลยกำหนดจากการเปรียบเทียบวันที่เป็นเพียงตัวช่วยคัดกรอง ' +
+          'ควรตรวจสอบสถานะรับชำระและเงื่อนไขวันหยุดก่อนจัดประเภทผิดนัดจริง' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-title"><span>รายการงวดชำระ</span></div>' +
+          renderDataTable(
+            [
+              "เลขที่งวด",
+              "บัญชีสินเชื่อ",
+              "ลูกค้า",
+              "วันครบกำหนด",
+              "ยอดงวด",
+              "ชำระแล้ว",
+              "ยอดคงเหลือ",
+              "สถานะ"
+            ],
+            rows
+          ) +
+        '</div>';
+    }
+
+
+    /* =====================================================
+       17. TRANSACTIONS
+       ===================================================== */
+
+    async function renderTransactions() {
+      const records = await api(
+        "adminListTransactions",
+        {
+          status: "ALL"
+        }
+      );
+
+      state.transactions = records || [];
+
+      const rows = state.transactions.map(function (record) {
+        return (
+          '<tr>' +
+            '<td>' + escapeHtml(record.transactionId) + '</td>' +
+            '<td>' +
+              escapeHtml(
+                record.user && record.user.fullName
+                  ? record.user.fullName
+                  : "ไม่พบข้อมูล"
+              ) +
+            '</td>' +
+            '<td>' + escapeHtml(record.type) + '</td>' +
+            '<td>' + statusPill(record.direction) + '</td>' +
+            '<td><strong>' + formatMoney(record.amount) + ' บาท</strong></td>' +
+            '<td>' + escapeHtml(record.provider || "—") + '</td>' +
+            '<td>' + escapeHtml(record.providerRef || "—") + '</td>' +
+            '<td>' + statusPill(record.status) + '</td>' +
+            '<td>' + formatDateTime(record.createdAt) + '</td>' +
+          '</tr>'
+        );
+      });
+
+      const confirmed = state.transactions.filter(function (item) {
+        return item.status === "CONFIRMED";
+      });
+
+      const totalIn = confirmed
+        .filter(function (item) {
+          return item.direction === "IN";
+        })
+        .reduce(function (sum, item) {
+          return sum + Number(item.amount || 0);
+        }, 0);
+
+      const totalOut = confirmed
+        .filter(function (item) {
+          return item.direction === "OUT";
+        })
+        .reduce(function (sum, item) {
+          return sum + Number(item.amount || 0);
+        }, 0);
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>ธุรกรรมและการเงิน</h2>' +
+            '<p>ดูรายการที่บันทึกในระบบสำหรับตรวจสอบและกระทบยอด</p>' +
+          '</div>' +
+          '<button class="btn btn-secondary" data-action="refresh-transactions">' +
+            '<i class="fa-solid fa-rotate"></i> รีเฟรช' +
+          '</button>' +
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:17px">' +
+          'ข้อมูลในตารางนี้คือธุรกรรมที่บันทึกใน Google Sheets ' +
+          'ไม่ใช่รายงานธนาคารที่ผ่านการกระทบยอดโดยอัตโนมัติทุกกรณี' +
+        '</div>' +
+
+        '<div class="grid grid-3" style="margin-bottom:17px">' +
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon"><i class="fa-solid fa-list"></i></div>' +
+              '<div><div class="metric-label">ธุรกรรมที่แสดง</div>' +
+                '<div class="metric-value">' + state.transactions.length + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon teal"><i class="fa-solid fa-arrow-down"></i></div>' +
+              '<div><div class="metric-label">ยอดรับเข้าที่บันทึกยืนยัน</div>' +
+                '<div class="metric-value" style="font-size:20px">' +
+                  formatMoney(totalIn) +
+                '</div>' +
+                '<div class="metric-caption">บาท</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="card">' +
+            '<div class="metric">' +
+              '<div class="metric-icon amber"><i class="fa-solid fa-arrow-up"></i></div>' +
+              '<div><div class="metric-label">ยอดจ่ายออกที่บันทึกยืนยัน</div>' +
+                '<div class="metric-value" style="font-size:20px">' +
+                  formatMoney(totalOut) +
+                '</div>' +
+                '<div class="metric-caption">บาท</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-title"><span>รายการธุรกรรม</span></div>' +
+          renderDataTable(
+            [
+              "รหัสธุรกรรม",
+              "ลูกค้า",
+              "ประเภท",
+              "ทิศทาง",
+              "ยอดเงิน",
+              "ผู้ให้บริการ",
+              "อ้างอิง",
+              "สถานะ",
+              "วันเวลา"
+            ],
+            rows
+          ) +
+        '</div>';
+    }
+
+
+    /* =====================================================
+       18. ANNOUNCEMENT MANAGER
+       ===================================================== */
+
+    async function renderAnnouncements() {
+      const announcements = await api("adminListAnnouncements");
+
+      state.announcements = announcements || [];
+
+      const rows = state.announcements.map(function (item) {
+        return (
+          '<tr>' +
+            '<td>' +
+              '<strong>' + escapeHtml(item.title) + '</strong>' +
+              '<div class="small muted">' + escapeHtml(item.announcementId) + '</div>' +
+            '</td>' +
+            '<td>' + escapeHtml(item.placement) + '</td>' +
+            '<td>' + Number(item.priority || 0) + '</td>' +
+            '<td>' +
+              (
+                item.active
+                  ? '<span class="status-pill success">เผยแพร่</span>'
+                  : '<span class="status-pill neutral">ปิดประกาศ</span>'
+              ) +
+            '</td>' +
+            '<td>' + formatDate(item.startsAt) + '</td>' +
+            '<td>' + formatDate(item.endsAt) + '</td>' +
+            '<td>' +
+              '<div class="table-actions">' +
+                '<button class="btn btn-outline btn-sm" data-action="edit-announcement" data-id="' +
+                  escapeHtml(item.announcementId) +
+                '"><i class="fa-solid fa-pen"></i> แก้ไข</button>' +
+                '<button class="btn btn-danger btn-sm" data-action="delete-announcement" data-id="' +
+                  escapeHtml(item.announcementId) +
+                '"><i class="fa-solid fa-trash"></i></button>' +
+              '</div>' +
+            '</td>' +
+          '</tr>'
+        );
+      });
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>จัดการประกาศ</h2>' +
+            '<p>เพิ่มประกาศ HTML และภาพสำหรับหน้า Login/Sign up หรือ Dashboard ผู้กู้</p>' +
+          '</div>' +
+          '<button class="btn btn-primary" data-action="new-announcement">' +
+            '<i class="fa-solid fa-plus"></i> เพิ่มประกาศ' +
+          '</button>' +
+        '</div>' +
+
+        '<div class="alert-box warning" style="margin-bottom:17px">' +
+          '<i class="fa-solid fa-image"></i> ' +
+          '<strong>ขนาดภาพที่แนะนำ:</strong> แบนเนอร์ 1200 × 400 px หรือภาพเนื้อหา 1200 × 800 px; ' +
+          'ตั้งค่าขนาดไฟล์ได้ด้วย Script Property MAX_IMAGE_SIZE_BYTES (ค่าเริ่มต้น 5 MB) ' +
+          'ภาพที่บันทึกจะถูกส่งไปยัง ImgBB ผ่านเซิร์ฟเวอร์เท่านั้น' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-title">' +
+            '<span>ประกาศทั้งหมด</span>' +
+            '<small>' + state.announcements.length + ' รายการ</small>' +
+          '</div>' +
+          renderDataTable(
+            [
+              "หัวข้อประกาศ",
+              "ตำแหน่ง",
+              "ลำดับ",
+              "สถานะ",
+              "เริ่มแสดง",
+              "สิ้นสุด",
+              "ดำเนินการ"
+            ],
+            rows
+          ) +
+        '</div>';
+    }
+
+    function findAnnouncement(announcementId) {
+      return state.announcements.find(function (item) {
+        return item.announcementId === announcementId;
+      });
+    }
+
+    function openAnnouncementEditor(announcement) {
+      const editing = Boolean(announcement);
+
+      const item = announcement || {
+        announcementId: "",
+        title: "",
+        placement: "AUTH",
+        htmlContent: "",
+        imageUrl: "",
+        priority: 0,
+        active: false,
+        startsAt: "",
+        endsAt: ""
+      };
+
+      state.selectedAnnouncementId = item.announcementId || "";
+      state.currentAnnouncementImageUrl = item.imageUrl || "";
+
+      showModal({
+        title: editing ? "แก้ไขประกาศ" : "เพิ่มประกาศ",
+        large: true,
+
+        body:
+          '<form id="announcementForm">' +
+
+            '<input id="announcementId" type="hidden" value="' +
+              escapeHtml(item.announcementId) +
+            '">' +
+
+            '<div class="form-grid" style="margin-bottom:17px">' +
+
+              '<div class="field span-2">' +
+                '<label for="announcementTitle">หัวข้อประกาศ</label>' +
+                '<input id="announcementTitle" maxlength="200" required value="' +
+                  escapeHtml(item.title) +
+                '">' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label for="announcementPlacement">ตำแหน่งแสดงผล</label>' +
+                '<select id="announcementPlacement">' +
+                  filterOption("AUTH", "หน้า Login และ Sign up", item.placement) +
+                  filterOption("BORROWER", "Dashboard ผู้กู้", item.placement) +
+                  filterOption("BOTH", "ทั้งหน้า Authentication และ Dashboard", item.placement) +
+                '</select>' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label for="announcementPriority">ลำดับความสำคัญ</label>' +
+                '<input id="announcementPriority" type="number" step="1" value="' +
+                  Number(item.priority || 0) +
+                '">' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label for="announcementStartsAt">เริ่มแสดง</label>' +
+                '<input id="announcementStartsAt" type="datetime-local" value="' +
+                  escapeHtml(toLocalDateTimeValue(item.startsAt)) +
+                '">' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label for="announcementEndsAt">สิ้นสุดการแสดง</label>' +
+                '<input id="announcementEndsAt" type="datetime-local" value="' +
+                  escapeHtml(toLocalDateTimeValue(item.endsAt)) +
+                '">' +
+              '</div>' +
+
+              '<div class="field span-2">' +
+                '<label class="check-row">' +
+                  '<input id="announcementActive" type="checkbox" ' +
+                    (item.active ? "checked" : "") +
+                  '>' +
+                  '<span>เปิดเผยแพร่ประกาศ</span>' +
+                '</label>' +
+              '</div>' +
+
+            '</div>' +
+
+            '<div class="field" style="margin-bottom:17px">' +
+              '<label for="announcementImageUrl">URL ภาพประกาศ</label>' +
+              '<input id="announcementImageUrl" type="url" placeholder="URL HTTPS จาก ImgBB" value="' +
+                escapeHtml(item.imageUrl || "") +
+              '">' +
+            '</div>' +
+
+            '<div class="field" style="margin-bottom:17px">' +
+              '<label for="announcementImageFile">อัปโหลดภาพใหม่ไปยัง ImgBB</label>' +
+              '<div class="file-drop">' +
+                '<i class="fa-solid fa-cloud-arrow-up"></i>' +
+                '<strong>เลือกไฟล์ภาพ</strong>' +
+                '<p class="small">JPG, PNG, WebP หรือ GIF</p>' +
+                '<p class="small">แนะนำ 1200 × 400 px สำหรับแบนเนอร์</p>' +
+                '<input id="announcementImageFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" style="display:block;width:100%;margin-top:12px">' +
+                '<div id="announcementImageStatus" class="small muted" style="margin-top:9px"></div>' +
+              '</div>' +
+              '<div id="announcementImagePreview" style="margin-top:12px"></div>' +
+            '</div>' +
+
+            '<div class="announcement-editor">' +
+
+              '<div class="field">' +
+                '<label for="announcementHtml">เนื้อหา HTML</label>' +
+                '<textarea id="announcementHtml" maxlength="20000" style="min-height:290px;font-family:monospace;font-size:11px">' +
+                  escapeHtml(item.htmlContent || "") +
+                '</textarea>' +
+                '<div class="field-hint">อนุญาต HTML ที่ปลอดภัยตามรายการที่ระบบกำหนด ระบบจะลบ script, event handler และรูปแบบที่ไม่อนุญาต</div>' +
+                '<button id="previewAnnouncementButton" class="btn btn-secondary btn-sm" type="button" style="align-self:flex-start;margin-top:8px">' +
+                  '<i class="fa-solid fa-eye"></i> อัปเดตตัวอย่าง' +
+                '</button>' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label>พรีวิวประกาศ</label>' +
+                '<div id="announcementPreview" class="announcement-preview"></div>' +
+              '</div>' +
+
+            '</div>' +
+
+          '</form>',
+        buttons: [
+          {
+            label: "ยกเลิก",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "บันทึกประกาศ",
+            className: "btn-primary",
+            icon: "fa-solid fa-floppy-disk",
+            onClick: submitAnnouncement
+          }
+        ]
+      });
+
+      const htmlInput = $("#announcementHtml");
+      const titleInput = $("#announcementTitle");
+      const imageInput = $("#announcementImageUrl");
+
+      const previewButton = $("#previewAnnouncementButton");
+
+      htmlInput.addEventListener("input", updateAnnouncementPreview);
+      titleInput.addEventListener("input", updateAnnouncementPreview);
+      imageInput.addEventListener("input", updateAnnouncementPreview);
+
+      previewButton.addEventListener(
+        "click",
+        updateAnnouncementPreview
+      );
+
+      $("#announcementImageFile").addEventListener(
+        "change",
+        handleAnnouncementImageUpload
+      );
+
+      updateAnnouncementPreview();
+    }
+
+    function toLocalDateTimeValue(value) {
+      if (!value) {
+        return "";
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return "";
+      }
+
+      return new Date(
+        date.getTime() - date.getTimezoneOffset() * 60000
+      ).toISOString().slice(0, 16);
+    }
+
+    function sanitizeAnnouncementHtml(html) {
+      const parsed = new DOMParser().parseFromString(
+        String(html || ""),
+        "text/html"
+      );
+
+      const allowed = new Set([
+        "P", "BR", "HR", "STRONG", "B", "EM", "I", "U",
+        "UL", "OL", "LI", "H1", "H2", "H3", "H4",
+        "BLOCKQUOTE", "DIV", "SPAN", "A", "IMG"
+      ]);
+
+      function cleanNode(parent) {
+        Array.from(parent.childNodes).forEach(function (node) {
+          if (node.nodeType === Node.COMMENT_NODE) {
+            node.remove();
+            return;
+          }
+
+          if (node.nodeType !== Node.ELEMENT_NODE) {
+            return;
+          }
+
+          if (
+            node.tagName === "SCRIPT" ||
+            node.tagName === "STYLE" ||
+            node.tagName === "IFRAME" ||
+            node.tagName === "OBJECT" ||
+            node.tagName === "EMBED" ||
+            node.tagName === "FORM" ||
+            node.tagName === "SVG" ||
+            node.tagName === "MATH" ||
+            node.tagName === "TEMPLATE"
+          ) {
+            node.remove();
+            return;
+          }
+
+          if (!allowed.has(node.tagName)) {
+            const fragment = document.createDocumentFragment();
+
+            while (node.firstChild) {
+              fragment.appendChild(node.firstChild);
+            }
+
+            node.replaceWith(fragment);
+
+            return;
+          }
+
+          Array.from(node.attributes).forEach(function (attribute) {
+            const name = attribute.name.toLowerCase();
+
+            if (
+              name.startsWith("on") ||
+              name === "style" ||
+              name === "srcdoc" ||
+              name === "formaction"
+            ) {
+              node.removeAttribute(attribute.name);
+            }
+          });
+
+          if (node.tagName === "A") {
+            const href = node.getAttribute("href") || "";
+
+            if (!/^(https:\/\/|mailto:|#)/i.test(href)) {
+              node.removeAttribute("href");
+            } else {
+              node.setAttribute("target", "_blank");
+              node.setAttribute("rel", "noopener noreferrer");
+            }
+          }
+
+          if (node.tagName === "IMG") {
+            const src = node.getAttribute("src") || "";
+
+            if (!/^https:\/\//i.test(src)) {
+              node.remove();
+              return;
+            }
+
+            node.setAttribute("loading", "lazy");
+            node.style.maxWidth = "100%";
+            node.style.height = "auto";
+          }
+
+          cleanNode(node);
+        });
+      }
+
+      cleanNode(parsed.body);
+
+      return parsed.body.innerHTML;
+    }
+
+    function updateAnnouncementPreview() {
+      const preview = $("#announcementPreview");
+
+      if (!preview) {
+        return;
+      }
+
+      const title = $("#announcementTitle").value.trim();
+      const html = $("#announcementHtml").value;
+      const imageUrl = $("#announcementImageUrl").value.trim();
+
+      const safeImageUrl = /^https:\/\//i.test(imageUrl)
+        ? imageUrl
+        : "";
+
+      preview.innerHTML =
+        '<div class="announcement-preview-card">' +
+          (
+            safeImageUrl
+              ? '<img src="' + escapeHtml(safeImageUrl) +
+                  '" alt="' + escapeHtml(title || "ภาพประกาศ") + '">'
+              : ''
+          ) +
+          '<div class="announcement-preview-content">' +
+            '<strong style="display:block;color:#101B48;margin-bottom:9px">' +
+              escapeHtml(title || "ตัวอย่างหัวข้อประกาศ") +
+            '</strong>' +
+            sanitizeAnnouncementHtml(html) +
+          '</div>' +
+        '</div>';
+    }
+
+    async function readFileAsDataUrl(file) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+
+        reader.onload = function () {
+          resolve(String(reader.result || ""));
+        };
+
+        reader.onerror = function () {
+          reject(new Error("ไม่สามารถอ่านไฟล์ภาพได้"));
+        };
+
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleAnnouncementImageUpload() {
+      const input = $("#announcementImageFile");
+      const status = $("#announcementImageStatus");
+
+      if (!input || !input.files || !input.files[0]) {
+        return;
+      }
+
+      const file = input.files[0];
+
+      if (
+        FINORA_ADMIN_CONFIG.IMAGE_ALLOWED_TYPES.indexOf(file.type) < 0
+      ) {
+        showMessageModal(
+          "ชนิดไฟล์ไม่ถูกต้อง",
+          "รองรับ JPG, PNG, WebP และ GIF เท่านั้น",
+          "error"
+        );
+
+        input.value = "";
+
+        return;
+      }
+
+      if (
+        file.size > FINORA_ADMIN_CONFIG.MAX_IMAGE_SIZE_BYTES
+      ) {
+        showMessageModal(
+          "ไฟล์มีขนาดใหญ่เกินไป",
+          "ขนาดภาพต้องไม่เกิน 5 MB ตามค่าตั้งต้นของหน้าเว็บ",
+          "error"
+        );
+
+        input.value = "";
+
+        return;
+      }
+
+      status.textContent = "กำลังอ่านและอัปโหลดภาพ...";
+
+      try {
+        const dataUrl = await readFileAsDataUrl(file);
+
+        const result = await withLoading(
+          "กำลังอัปโหลดภาพไปยัง ImgBB",
+          async function () {
+            return await api(
+              "adminUploadImage",
+              {
+                fileName: file.name,
+                mimeType: file.type,
+                imageBase64: dataUrl
+              }
+            );
+          }
+        );
+
+        state.currentAnnouncementImageUrl = result.url;
+
+        $("#announcementImageUrl").value = result.url;
+
+        status.textContent = "อัปโหลดภาพสำเร็จ";
+
+        updateAnnouncementPreview();
+
+        showToast("อัปโหลดภาพสำเร็จ", "success");
+
+      } catch (error) {
+        status.textContent = "อัปโหลดภาพไม่สำเร็จ";
+
+        showMessageModal(
+          "อัปโหลดภาพไม่สำเร็จ",
+          error.message,
+          "error"
+        );
+      }
+    }
+
+    async function submitAnnouncement(button) {
+      const form = $("#announcementForm");
+
+      if (!form || !form.reportValidity()) {
+        return;
+      }
+
+      const startsValue = $("#announcementStartsAt").value;
+      const endsValue = $("#announcementEndsAt").value;
+
+      const startsAt = startsValue
+        ? new Date(startsValue).toISOString()
+        : "";
+
+      const endsAt = endsValue
+        ? new Date(endsValue).toISOString()
+        : "";
+
+      if (
+        startsAt &&
+        endsAt &&
+        new Date(endsAt).getTime() < new Date(startsAt).getTime()
+      ) {
+        showToast("วันสิ้นสุดต้องไม่ก่อนวันเริ่มแสดง", "error");
+        return;
+      }
+
+      const imageUrl = $("#announcementImageUrl").value.trim();
+
+      if (
+        imageUrl &&
+        !/^https:\/\//i.test(imageUrl)
+      ) {
+        showToast("URL ภาพประกาศต้องใช้ HTTPS", "error");
+        return;
+      }
+
+      const payload = {
+        announcementId: $("#announcementId").value,
+        title: $("#announcementTitle").value.trim(),
+        placement: $("#announcementPlacement").value,
+        htmlContent: $("#announcementHtml").value,
+        imageUrl: imageUrl,
+        priority: Number($("#announcementPriority").value || 0),
+        active: $("#announcementActive").checked,
+        startsAt: startsAt,
+        endsAt: endsAt
+      };
+
+      setButtonLoading(button, true, "กำลังบันทึก...");
+
+      try {
+        await withLoading(
+          "กำลังบันทึกประกาศ",
+          async function () {
+            return await api("adminSaveAnnouncement", payload);
+          }
+        );
+
+        closeModal();
+
+        showToast("บันทึกประกาศแล้ว", "success");
+
+        await navigateTo("announcements");
+
+      } catch (error) {
+        showMessageModal(
+          "บันทึกประกาศไม่สำเร็จ",
+          error.message,
+          "error"
+        );
+
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+    async function deleteAnnouncement(announcementId) {
+      const item = findAnnouncement(announcementId);
+
+      if (!item) {
+        showToast("ไม่พบประกาศ", "error");
+        return;
+      }
+
+      showModal({
+        title: "ยืนยันการลบประกาศ",
+        body:
+          '<div class="text-center">' +
+            '<div style="font-size:40px;color:#D94452;margin-bottom:13px">' +
+              '<i class="fa-solid fa-trash"></i>' +
+            '</div>' +
+            '<p>ต้องการปิดใช้งานประกาศนี้ใช่หรือไม่?</p>' +
+            '<strong>' + escapeHtml(item.title) + '</strong>' +
+            '<p class="muted small">ระบบจะบันทึกสถานะการลบและเก็บร่องรอยไว้</p>' +
+          '</div>',
+        buttons: [
+          {
+            label: "ยกเลิก",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "ยืนยัน",
+            className: "btn-danger",
+            onClick: async function (button) {
+              setButtonLoading(button, true, "กำลังดำเนินการ...");
+
+              try {
+                await api(
+                  "adminDeleteAnnouncement",
+                  {
+                    announcementId: announcementId
+                  }
+                );
+
+                closeModal();
+
+                showToast("ปิดใช้งานประกาศแล้ว", "success");
+
+                await navigateTo("announcements");
+
+              } catch (error) {
+                showMessageModal(
+                  "ไม่สามารถลบประกาศได้",
+                  error.message,
+                  "error"
+                );
+              }
+            }
+          }
+        ]
+      });
+    }
+
+
+    /* =====================================================
+       19. SUPPORT TICKETS
+       ===================================================== */
+
+    async function renderSupportTickets() {
+      const tickets = await api(
+        "adminListSupportTickets",
+        {
+          status: "ALL"
+        }
+      );
+
+      state.tickets = tickets || [];
+
+      const rows = state.tickets.map(function (ticket) {
+        return (
+          '<tr>' +
+            '<td><strong>' + escapeHtml(ticket.ticketId) + '</strong></td>' +
+            '<td>' +
+              escapeHtml(
+                ticket.user && ticket.user.fullName
+                  ? ticket.user.fullName
+                  : "ไม่พบข้อมูล"
+              ) +
+            '</td>' +
+            '<td>' + escapeHtml(ticket.subject) + '</td>' +
+            '<td>' + escapeHtml(ticket.category) + '</td>' +
+            '<td>' + statusPill(ticket.status) + '</td>' +
+            '<td>' + formatDateTime(ticket.createdAt) + '</td>' +
+            '<td>' +
+              '<button class="btn btn-outline btn-sm" data-action="edit-ticket" data-id="' +
+                escapeHtml(ticket.ticketId) +
+              '"><i class="fa-solid fa-reply"></i> จัดการ</button>' +
+            '</td>' +
+          '</tr>'
+        );
+      });
+
+      $("#pageContent").innerHTML =
+        '<div class="page-heading">' +
+          '<div>' +
+            '<h2>ศูนย์ช่วยเหลือ</h2>' +
+            '<p>ตรวจสอบคำร้อง ตอบกลับ และอัปเดตสถานะให้ลูกค้า</p>' +
+          '</div>' +
+          '<button class="btn btn-secondary" data-action="refresh-support">' +
+            '<i class="fa-solid fa-rotate"></i> รีเฟรช' +
+          '</button>' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-title">' +
+            '<span>คำร้องทั้งหมด</span>' +
+            '<small>' + state.tickets.length + ' รายการ</small>' +
+          '</div>' +
+          renderDataTable(
+            [
+              "เลขที่คำร้อง",
+              "ลูกค้า",
+              "หัวข้อ",
+              "หมวดหมู่",
+              "สถานะ",
+              "วันที่แจ้ง",
+              "ดำเนินการ"
+            ],
+            rows
+          ) +
+        '</div>';
+    }
+
+    function findTicket(ticketId) {
+      return state.tickets.find(function (ticket) {
+        return ticket.ticketId === ticketId;
+      });
+    }
+
+    function openTicketEditor(ticket) {
+      if (!ticket) {
+        showToast("ไม่พบคำร้อง", "error");
+        return;
+      }
+
+      showModal({
+        title: "จัดการคำร้องลูกค้า",
+        large: true,
+        body:
+          '<div class="grid grid-2" style="margin-bottom:17px">' +
+            '<div class="card">' +
+              '<div class="card-title">รายละเอียดผู้ส่ง</div>' +
+              '<div class="data-list">' +
+                dataRow(
+                  "ลูกค้า",
+                  ticket.user && ticket.user.fullName
+                    ? ticket.user.fullName
+                    : "ไม่พบข้อมูล"
+                ) +
+                dataRow(
+                  "อีเมล",
+                  ticket.user && ticket.user.email
+                    ? ticket.user.email
+                    : ""
+                ) +
+                dataRow("เลขที่คำร้อง", ticket.ticketId) +
+                dataRow("หมวดหมู่", ticket.category) +
+                dataRow("เวลาแจ้ง", formatDateTime(ticket.createdAt)) +
+              '</div>' +
+            '</div>' +
+
+            '<div class="card">' +
+              '<div class="card-title">ข้อความจากลูกค้า</div>' +
+              '<strong>' + escapeHtml(ticket.subject) + '</strong>' +
+              '<p style="white-space:pre-wrap;overflow-wrap:anywhere">' +
+                escapeHtml(ticket.message) +
+              '</p>' +
+            '</div>' +
+          '</div>' +
+
+          '<form id="ticketEditForm" class="form-grid">' +
+
+            '<input id="ticketId" type="hidden" value="' +
+              escapeHtml(ticket.ticketId) +
+            '">' +
+
+            '<div class="field">' +
+              '<label for="ticketStatus">สถานะคำร้อง</label>' +
+              '<select id="ticketStatus">' +
+                filterOption("OPEN", "เปิดคำร้อง", ticket.status) +
+                filterOption("IN_PROGRESS", "กำลังดำเนินการ", ticket.status) +
+                filterOption("WAITING_CUSTOMER", "รอข้อมูลจากลูกค้า", ticket.status) +
+                filterOption("RESOLVED", "แก้ไขแล้ว", ticket.status) +
+                filterOption("CLOSED", "ปิดคำร้อง", ticket.status) +
+              '</select>' +
+            '</div>' +
+
+            '<div class="field">' +
+              '<label for="ticketAssignedTo">ผู้รับผิดชอบ</label>' +
+              '<input id="ticketAssignedTo" maxlength="200" value="' +
+                escapeHtml(ticket.assignedTo || state.user.userId) +
+              '">' +
+            '</div>' +
+
+            '<div class="field span-2">' +
+              '<label for="ticketStaffReply">ข้อความตอบกลับลูกค้า</label>' +
+              '<textarea id="ticketStaffReply" maxlength="5000">' +
+                escapeHtml(ticket.staffReply || "") +
+              '</textarea>' +
+            '</div>' +
+
+          '</form>',
+        buttons: [
+          {
+            label: "ยกเลิก",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "บันทึกคำร้อง",
+            className: "btn-primary",
+            icon: "fa-solid fa-floppy-disk",
+            onClick: submitTicketEdit
+          }
+        ]
+      });
+    }
+
+    async function submitTicketEdit(button) {
+      const form = $("#ticketEditForm");
+
+      if (!form || !form.reportValidity()) {
+        return;
+      }
+
+      const payload = {
+        ticketId: $("#ticketId").value,
+        status: $("#ticketStatus").value,
+        assignedTo: $("#ticketAssignedTo").value.trim(),
+        staffReply: $("#ticketStaffReply").value.trim()
+      };
+
+      setButtonLoading(button, true, "กำลังบันทึก...");
+
+      try {
+        await withLoading(
+          "กำลังบันทึกการดำเนินงานคำร้อง",
+          async function () {
+            return await api("adminUpdateSupportTicket", payload);
+          }
+        );
+
+        closeModal();
+
+        showToast("บันทึกคำร้องแล้ว", "success");
+
+        await navigateTo("support");
+
+      } catch (error) {
+        showMessageModal(
+          "บันทึกคำร้องไม่สำเร็จ",
+          error.message,
+          "error"
+        );
+
+      } finally {
+        setButtonLoading(button, false);
+      }
+    }
+
+
+    /* =====================================================
+       20. ACTION HANDLER
+       ===================================================== */
+
+    async function handleAction(action, button) {
+      try {
+        switch (action) {
+          case "refresh-dashboard":
+            await navigateTo("dashboard");
+            break;
+
+          case "refresh-applications":
+            state.applicationPage = 1;
+            await navigateTo("applications");
+            break;
+
+          case "application-prev":
+            state.applicationPage = Math.max(
+              1,
+              state.applicationPage - 1
+            );
+            await navigateTo("applications");
+            break;
+
+          case "application-next":
+            state.applicationPage++;
+            await navigateTo("applications");
+            break;
+
+          case "review-application":
+            await openApplicationReview(button.dataset.id);
+            break;
+
+          case "search-users":
+            state.userSearch = $("#userSearch")
+              ? $("#userSearch").value.trim()
+              : "";
+
+            state.userPage = 1;
+
+            await navigateTo("users");
+            break;
+
+          case "clear-user-search":
+            state.userSearch = "";
+            state.userPage = 1;
+
+            await navigateTo("users");
+            break;
+
+          case "user-prev":
+            state.userPage = Math.max(1, state.userPage - 1);
+            await navigateTo("users");
+            break;
+
+          case "user-next":
+            state.userPage++;
+            await navigateTo("users");
+            break;
+
+          case "view-user":
+            await viewUserDetails(button.dataset.id);
+            break;
+
+          case "new-product":
+            openProductEditor(null);
+            break;
+
+          case "edit-product": {
+            const product = state.products.find(function (item) {
+              return item.productId === button.dataset.id;
+            });
+
+            openProductEditor(product || null);
+            break;
+          }
+
+          case "record-contract":
+            state.selectedApplicationId = button.dataset.id;
+            await openContractRecordModal(button.dataset.id);
+            break;
+
+          case "activate-loan":
+            state.selectedApplicationId = button.dataset.id;
+            await openActivateLoanModal(button.dataset.id);
+            break;
+
+          case "refresh-repayments":
+            await navigateTo("repayments");
+            break;
+
+          case "refresh-transactions":
+            await navigateTo("transactions");
+            break;
+
+          case "new-announcement":
+            openAnnouncementEditor(null);
+            break;
+
+          case "edit-announcement": {
+            const announcement = findAnnouncement(button.dataset.id);
+            openAnnouncementEditor(announcement || null);
+            break;
+          }
+
+          case "delete-announcement":
+            await deleteAnnouncement(button.dataset.id);
+            break;
+
+          case "refresh-support":
+            await navigateTo("support");
+            break;
+
+          case "edit-ticket":
+            openTicketEditor(findTicket(button.dataset.id));
+            break;
+
+          default:
+            console.warn("Unknown admin action:", action);
+        }
+
+      } catch (error) {
+        showMessageModal(
+          "ดำเนินการไม่สำเร็จ",
+          error.message || "เกิดข้อผิดพลาด",
+          "error"
+        );
+      }
+    }
+
+
+    /* =====================================================
+       21. LOGOUT
+       ===================================================== */
+
+    $("#logoutButton").addEventListener("click", function () {
+      showModal({
+        title: "ยืนยันการออกจากระบบ",
+        body:
+          '<div class="text-center">' +
+            '<div style="font-size:41px;color:#315DB8;margin-bottom:13px">' +
+              '<i class="fa-solid fa-arrow-right-from-bracket"></i>' +
+            '</div>' +
+            '<p>คุณต้องการออกจากระบบผู้ดูแล FINORA ใช่หรือไม่?</p>' +
+          '</div>',
+        buttons: [
+          {
+            label: "ยกเลิก",
+            className: "btn-secondary",
+            onClick: closeModal
+          },
+          {
+            label: "ออกจากระบบ",
+            className: "btn-primary",
+            onClick: async function () {
+              try {
+                await api("logout");
+              } catch (error) {
+                console.warn("Logout request failed.");
+              }
+
+              clearSession();
+
+              state.isAuthorized = false;
+
+              closeModal();
+
+              showAccessScreen(
+                "ออกจากระบบแล้ว",
+                "คุณออกจากระบบ FINORA เรียบร้อยแล้ว",
+                "fa-circle-check"
+              );
+            }
+          }
+        ]
+      });
+    });
+
+    $("#returnLoginButton").addEventListener("click", function () {
+      const url = new URL("index.html", window.location.href);
+
+      window.location.href = url.toString();
+    });
+
+
+    /* =====================================================
+       22. EVENT DELEGATION FOR DYNAMIC FORMS
+       ===================================================== */
+
+    document.addEventListener("submit", function (event) {
+      if (event.target.id === "applicationReviewForm") {
+        event.preventDefault();
+      }
+
+      if (event.target.id === "productForm") {
+        event.preventDefault();
+      }
+
+      if (event.target.id === "contractRecordForm") {
+        event.preventDefault();
+      }
+
+      if (event.target.id === "activateLoanForm") {
+        event.preventDefault();
+      }
+
+      if (event.target.id === "announcementForm") {
+        event.preventDefault();
+      }
+
+      if (event.target.id === "ticketEditForm") {
+        event.preventDefault();
+      }
+    });
+
+
+    /* =====================================================
+       23. START APPLICATION
+       ===================================================== */
+
+    async function initializeApplication() {
+      showLoading("กำลังตรวจสอบสิทธิ์ผู้ดูแลระบบ");
+
+      try {
+        validateApiUrl();
+
+        await initializeAdmin();
+
+      } catch (error) {
+        console.error("FINORA Admin initialization error:", error);
+
+        showAccessScreen(
+          "เชื่อมต่อระบบไม่สำเร็จ",
+          error.message || "กรุณาตรวจสอบ API_URL และการ Deploy Apps Script",
+          "fa-circle-exclamation"
+        );
+
+      } finally {
+        hideLoading(true);
+      }
+    }
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      initializeApplication
+    );
+  </script>
+
+</body>
+  </html>
