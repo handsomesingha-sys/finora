@@ -1416,13 +1416,13 @@ onClick: closeModal
 }
 
 function showApiError(error, title = "ดำเนินการไม่สำเร็จ") {
-showMessage(
-title,
-error && error.message
-? error.message
-: "ระบบเกิดข้อผิดพลาด กรุณาลองใหม่",
-"error"
-);
+  console.error("[FINORA Admin]", error);
+
+  showMessage(
+    title || "ทำรายการไม่สำเร็จ",
+    "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
+    "error"
+  );
 }
 
 $("#modalClose").addEventListener("click", closeModal);
@@ -1505,13 +1505,13 @@ throw error;
 return result;
 
 } catch (error) {
-if (error instanceof TypeError) {
-throw new Error(
-"เชื่อมต่อ API ไม่สำเร็จ อาจเกิดจาก CORS หรือ Web App Deployment กรุณาตรวจสอบ URL และการตั้งค่า Apps Script"
-);
-}
+  if (error instanceof TypeError) {
+    throw new Error(
+      "เกิดข้อผิดพลาดในการทำรายการ กรุณาลองใหม่อีกครั้ง"
+    );
+  }
 
-throw error;
+  throw error;
 
 } finally {
 if (!silent) {
@@ -1590,8 +1590,8 @@ return;
 }
 
 showMessage(
-"เชื่อมต่อระบบไม่สำเร็จ",
-error.message || "ไม่สามารถตรวจสอบสิทธิ์ผู้ดูแลได้",
+"ดำเนินการไม่สำเร็จ",
+error.message || "ไม่สามารถตรวจสอบข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
 "error"
 );
 } finally {
