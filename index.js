@@ -1,150 +1,173 @@
-/**
- * =====================================================================
- * FINORA - FRONTEND API CLIENT
+/* =====================================================================
+ * FINORA - Frontend application client
  * File: index.js
- * Connects to: Google Apps Script Code.gs
  *
- * Responsibilities:
- * - API requests and error handling
- * - Authentication and session storage
- * - Email verification request and registration
- * - Password reset and password change
- * - LINE Login and account linking
- * - Borrower dashboard and loan operations
- * - Repayment schedule and transaction history
- * - Announcements, notifications and support tickets
- * - ImgBB upload through the protected backend API
- * - Admin API methods
- * - Shared loading spinner, modal, toast and consent-document modal
- * - Client-side form validation
+ * Frontend responsibilities:
+ * - Communicate with the FINORA Google Apps Script Web App
+ * - Email/password and Google Sign-In authentication
+ * - User session handling, registration and password recovery
+ * - Profile, dashboard, loan, repayment and transaction operations
+ * - PromptPay QR and slip verification requests through the backend
+ * - Notifications, support requests, image upload and admin operations
+ * - Shared loading UI, toasts, form validation and consent dialogs
  *
- * No mock data.
- * No fake API responses.
- * No passwords stored in browser storage.
- * No server-side API secrets in this file.
- * No SweetAlert2.
- *
- * IMPORTANT:
- * A valid API_URL must be configured before calling the API.
- * =====================================================================
- */
-
+ * SECURITY:
+ * - Never place Thunder API tokens, ImgBB keys or other server secrets here.
+ * - Google OAuth Client ID is public and may be configured in index.html.
+ * - Never store a user's password in browser storage.
+ * - Access control and payment verification must be enforced by Code.gs.
+ * ===================================================================== */
 (function (window, document) {
   "use strict";
 
-  /* ================================================================
-   * 1. GLOBAL CONFIGURATION
-   * ================================================================ */
-
   const DEFAULT_CONFIG = {
-    API_URL: "",
+    API_URL: "https://script.google.com/macros/s/AKfycbwWEJQPg0aOWSUMSiMVi2d-LQ9Z7wGh12lnA3G61W-Q-kmJPUb5E-MxPmuLH05V4MGL5g/exec",
     APP_NAME: "FINORA",
+    GOOGLE_CLIENT_ID: "1022921992521-s6gibobvv8ua1ql8891vb5qmbvbohi3o.apps.googleusercontent.com",
     API_TIMEOUT_MS: 60000,
-    MAX_IMAGE_SIZE_BYTES: 5242880,
-    SUPPORTED_IMAGE_TYPES: [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/gif"
-    ],
+    SESSION_TTL_SECONDS: 7200,
+    REMEMBER_SESSION_TTL_SECONDS: 2592000,
+    MIN_AGE: 20,
     PASSWORD_MIN_LENGTH: 10,
     PASSWORD_MAX_LENGTH: 128,
-    SESSION_STORAGE_KEY: "finora_session_token",
+    MAX_IMAGE_SIZE_BYTES: 5242880,
+    SUPPORTED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp"],
+    TERMS_VERSION: "2026-10-01",
+    PRIVACY_VERSION: "2026-10-01",
+    SESSION_TOKEN_KEY: "finora_session_token",
     SESSION_EXPIRY_KEY: "finora_session_expiry",
     REMEMBER_SESSION_KEY: "finora_remember_session",
-    PENDING_LINE_SIGNUP_KEY: "finora_pending_line_signup",
-    PENDING_LINE_SIGNUP_EXPIRY_KEY: "finora_pending_line_signup_expiry"
+    PENDING_EMAIL_KEY: "finora_pending_email",
+    GOOGLE_SCRIPT_ID: "finora-google-identity-script",
+    ACTIONS: {
+      health: "ping",
+      publicConfig: "getPublicConfig",
+      register: "registerUser",
+      requestEmailVerification: "requestEmailVerification",
+      verifyEmail: "verifyEmail",
+      login: "login",
+      googleLogin: "googleLogin",
+      currentUser: "getCurrentUser",
+      logout: "logout",
+      requestPasswordReset: "requestPasswordReset",
+      resetPassword: "resetPassword",
+      changePassword: "changePassword",
+      updateProfile: "updateProfile",
+      publicAnnouncements: "getPublicAnnouncements",
+      publicLoanProducts: "getPublicLoanProducts",
+      dashboard: "getDashboardData",
+      loanApplications: "getMyLoanApplications",
+      submitLoanApplication: "submitLoanApplication",
+      loanAccounts: "getMyLoanAccounts",
+      repaymentSchedule: "getMyRepaymentSchedule",
+      transactions: "getMyTransactions",
+      notifications: "getMyNotifications",
+      markNotificationRead: "markNotificationRead",
+      sessions: "getMySessions",
+      revokeSession: "revokeMySession",
+      createSupportTicket: "createSupportTicket",
+      supportTickets: "getMySupportTickets",
+      uploadImage: "uploadImage",
+      createPromptPayQR: "generatePromptPayQR",
+      verifyPaymentSlip: "verifyPaymentSlip",
+      paymentStatus: "getPaymentStatus",
+      adminOverview: "adminOverview",
+      adminUsers: "adminListUsers",
+      adminUpdateUserStatus: "adminUpdateUserStatus",
+      adminLoanProducts: "adminListLoanProducts",
+      adminSaveLoanProduct: "adminSaveLoanProduct",
+      adminDeleteLoanProduct: "adminDeleteLoanProduct",
+      adminLoanApplications: "adminListLoanApplications",
+      adminUpdateApplication: "adminUpdateApplication",
+      adminCreateLoanAccount: "adminCreateLoanAccount",
+      adminConfirmDisbursement: "adminConfirmDisbursement",
+      adminTransactions: "adminListTransactions",
+      adminRecordRepayment: "adminRecordRepayment",
+      adminAnnouncements: "adminListAnnouncements",
+      adminSaveAnnouncement: "adminSaveAnnouncement",
+      adminDeleteAnnouncement: "adminDeleteAnnouncement",
+      adminSupportTickets: "adminListSupportTickets",
+      adminUpdateSupportTicket: "adminUpdateSupportTicket",
+      adminAuditLogs: "adminListAuditLogs",
+      adminListAdmins: "adminListAdmins",
+      adminSetAdminStatus: "adminSetAdminStatus",
+      adminGetSettings: "adminGetSettings",
+      adminUpdateSettings: "adminUpdateSettings",
+      adminSendNotification: "adminSendNotification"
+    }
   };
 
   window.FINORA_CONFIG = window.FINORA_CONFIG || {};
-
-  const CONFIG = Object.assign(
+  const CONFIG = Object.assign({}, DEFAULT_CONFIG, window.FINORA_CONFIG);
+  CONFIG.ACTIONS = Object.assign(
     {},
-    DEFAULT_CONFIG,
-    window.FINORA_CONFIG
+    DEFAULT_CONFIG.ACTIONS,
+    window.FINORA_CONFIG.ACTIONS || {}
   );
 
-  const APP_STATE = {
-    user: null,
+  const STATE = {
+    initialized: false,
     isAuthenticated: false,
+    user: null,
     sessionExpiry: null,
     rememberMe: false,
-    pendingResetToken: "",
-    pendingLineSignupCode: "",
-    publicConfig: null,
     loadingCount: 0,
-    initialized: false
+    googleReady: false,
+    pendingGooglePromise: null
   };
-
-  const AUTH_ERROR_CODES = [
-    "AUTH_REQUIRED",
-    "SESSION_INVALID",
-    "SESSION_EXPIRED",
-    "ACCOUNT_NOT_ACTIVE"
-  ];
-
-  const VALID_TITLES = [
-    "เด็กหญิง",
-    "เด็กชาย",
-    "นาย",
-    "นาง",
-    "นางสาว"
-  ];
-
-  const ANNOUNCEMENT_PLACEMENTS = [
-    "LOGIN",
-    "SIGNUP",
-    "BORROWER_DASHBOARD"
-  ];
-
-  let activeModalCleanup = null;
-
-  /* ================================================================
-   * 2. CUSTOM ERROR CLASS
-   * ================================================================ */
 
   class FinoraError extends Error {
     constructor(code, message, details) {
-      super(
-        message ||
-        "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
-      );
-
+      super(message || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       this.name = "FinoraError";
       this.code = code || "UNKNOWN_ERROR";
       this.details = details || null;
     }
   }
 
-  /* ================================================================
-   * 3. GENERAL HELPERS
-   * ================================================================ */
+  const AUTH_ERROR_CODES = new Set([
+    "AUTH_REQUIRED",
+    "SESSION_INVALID",
+    "SESSION_EXPIRED",
+    "ACCOUNT_NOT_ACTIVE",
+    "INVALID_SESSION",
+    "TOKEN_EXPIRED",
+    "UNAUTHORIZED"
+  ]);
 
-  function dispatchEvent(name, detail) {
+  function emit(name, detail) {
     try {
       window.dispatchEvent(
-        new CustomEvent(name, {
-          detail: detail === undefined ? null : detail
-        })
+        new CustomEvent(name, { detail: detail || {} })
       );
     } catch (error) {
-      console.error(
-        "[FINORA] Event dispatch failed:",
-        name,
-        error
-      );
+      // Events are helpful for the UI but must not break core operations.
     }
   }
 
-  function normalizeString(value) {
-    if (
-      value === null ||
-      value === undefined
-    ) {
-      return "";
-    }
+  function isObject(value) {
+    return !!value &&
+      typeof value === "object" &&
+      !Array.isArray(value);
+  }
 
-    return String(value).trim();
+  function text(value) {
+    return value === null || value === undefined
+      ? ""
+      : String(value).trim();
+  }
+
+  function normalizedEmail(value) {
+    return text(value).toLowerCase();
+  }
+
+  function escapeHtml(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function safeJsonParse(value) {
@@ -155,167 +178,39 @@
     }
   }
 
-  function isPlainObject(value) {
-    return (
-      value !== null &&
-      typeof value === "object" &&
-      !Array.isArray(value)
-    );
-  }
-
-  function normalizeEmail(email) {
-    return normalizeString(email).toLowerCase();
-  }
-
-  function escapeHtml(value) {
-    return String(
-      value === null || value === undefined
-        ? ""
-        : value
-    )
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  function getCurrentApiUrl() {
-    const configured = normalizeString(
-      CONFIG.API_URL
-    );
-
-    if (!configured) {
-      throw new FinoraError(
-        "API_NOT_CONFIGURED",
-        "ยังไม่ได้ตั้งค่า URL ของ FINORA API กรุณากำหนด window.FINORA_CONFIG.API_URL ใน index.html"
-      );
-    }
-
-    if (
-      !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/i.test(
-        configured
-      )
-    ) {
-      throw new FinoraError(
-        "INVALID_API_URL",
-        "API_URL ต้องเป็น URL Google Apps Script Web App ที่ลงท้ายด้วย /exec"
-      );
-    }
-
-    return configured.replace(/\/+$/, "");
-  }
-
-  function getStorage(storageName) {
-    try {
-      return window[storageName];
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function safeStorageGet(storageName, key) {
-    const storage = getStorage(storageName);
-
-    if (!storage) {
-      return null;
-    }
-
-    try {
-      return storage.getItem(key);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function safeStorageSet(storageName, key, value) {
-    const storage = getStorage(storageName);
-
-    if (!storage) {
-      throw new FinoraError(
-        "STORAGE_UNAVAILABLE",
-        "เบราว์เซอร์ไม่อนุญาตให้จัดเก็บสถานะการเข้าสู่ระบบ"
-      );
-    }
-
-    try {
-      storage.setItem(
-        key,
-        String(value)
-      );
-
-      return true;
-    } catch (error) {
-      throw new FinoraError(
-        "STORAGE_WRITE_FAILED",
-        "ไม่สามารถจัดเก็บสถานะการเข้าสู่ระบบได้"
-      );
-    }
-  }
-
-  function safeStorageRemove(storageName, key) {
-    const storage = getStorage(storageName);
-
-    if (!storage) {
-      return;
-    }
-
-    try {
-      storage.removeItem(key);
-    } catch (error) {
-      console.warn(
-        "[FINORA] Could not clear browser storage."
-      );
-    }
-  }
-
-  function formatMoney(value, options) {
+  function money(value, currency) {
     const number = Number(value);
 
     if (!Number.isFinite(number)) {
       return "—";
     }
 
-    const formatter = new Intl.NumberFormat(
-      "th-TH",
-      Object.assign(
-        {
-          style: "currency",
-          currency: "THB",
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        },
-        options || {}
-      )
-    );
-
-    return formatter.format(number);
+    return new Intl.NumberFormat("th-TH", {
+      style: "currency",
+      currency: currency || "THB",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(number);
   }
 
-  function formatNumber(value, maximumFractionDigits) {
+  function numberFormat(value, digits) {
     const number = Number(value);
 
     if (!Number.isFinite(number)) {
       return "—";
     }
 
-    return new Intl.NumberFormat(
-      "th-TH",
-      {
-        maximumFractionDigits:
-          maximumFractionDigits === undefined
-            ? 2
-            : maximumFractionDigits
-      }
-    ).format(number);
+    return new Intl.NumberFormat("th-TH", {
+      maximumFractionDigits: Number.isInteger(digits) ? digits : 2
+    }).format(number);
   }
 
-  function formatDate(value, options) {
+  function dateFormat(value, includeTime) {
     if (!value) {
       return "—";
     }
 
-    const date = new Date(value);
+    const date = value instanceof Date ? value : new Date(value);
 
     if (Number.isNaN(date.getTime())) {
       return "—";
@@ -323,126 +218,22 @@
 
     return new Intl.DateTimeFormat(
       "th-TH",
-      Object.assign(
-        {
-          day: "numeric",
-          month: "short",
-          year: "numeric"
-        },
-        options || {}
-      )
+      includeTime
+        ? { dateStyle: "medium", timeStyle: "short" }
+        : { dateStyle: "medium" }
     ).format(date);
   }
 
-  function formatDateTime(value) {
-    if (!value) {
-      return "—";
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return "—";
-    }
-
-    return new Intl.DateTimeFormat(
-      "th-TH",
-      {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      }
-    ).format(date);
-  }
-
-  function isDateValid(dateString) {
-    const value = normalizeString(dateString);
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      return false;
-    }
-
-    const parts = value.split("-").map(Number);
-
-    const date = new Date(
-      Date.UTC(
-        parts[0],
-        parts[1] - 1,
-        parts[2]
-      )
-    );
-
-    return (
-      date.getUTCFullYear() === parts[0] &&
-      date.getUTCMonth() === parts[1] - 1 &&
-      date.getUTCDate() === parts[2]
+  function validEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      normalizedEmail(email)
     );
   }
 
-  function calculateAge(dateString) {
-    if (!isDateValid(dateString)) {
-      return null;
-    }
+  function validateEmail(email) {
+    const value = normalizedEmail(email);
 
-    const parts = dateString.split("-").map(Number);
-
-    const birthDate = new Date(
-      Date.UTC(
-        parts[0],
-        parts[1] - 1,
-        parts[2]
-      )
-    );
-
-    const today = new Date();
-
-    let age =
-      today.getUTCFullYear() -
-      birthDate.getUTCFullYear();
-
-    const monthDifference =
-      today.getUTCMonth() -
-      birthDate.getUTCMonth();
-
-    if (
-      monthDifference < 0 ||
-      (
-        monthDifference === 0 &&
-        today.getUTCDate() < birthDate.getUTCDate()
-      )
-    ) {
-      age--;
-    }
-
-    return age;
-  }
-
-  function getMinimumAge() {
-    const config = APP_STATE.publicConfig;
-
-    const value = Number(
-      config && config.minAge
-    );
-
-    return (
-      Number.isFinite(value) && value > 0
-    )
-      ? value
-      : 20;
-  }
-
-  function assertValidEmail(email) {
-    const value = normalizeEmail(email);
-
-    const pattern =
-      /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+$/i;
-
-    if (
-      value.length > 254 ||
-      !pattern.test(value)
-    ) {
+    if (!value || !validEmail(value)) {
       throw new FinoraError(
         "INVALID_EMAIL",
         "กรุณากรอกอีเมลให้ถูกต้อง"
@@ -452,167 +243,338 @@
     return value;
   }
 
-  function assertValidPhone(phone) {
-    const value = normalizeString(phone)
-      .replace(/[\s-]/g, "");
+  function validatePhone(phone) {
+    const value = text(phone).replace(/[\s()-]/g, "");
 
-    if (!/^0\d{9}$/.test(value)) {
+    if (!/^\+?[0-9]{9,15}$/.test(value)) {
       throw new FinoraError(
         "INVALID_PHONE",
-        "กรุณากรอกหมายเลขโทรศัพท์มือถือ 10 หลัก"
+        "กรุณากรอกหมายเลขโทรศัพท์ให้ถูกต้อง"
       );
     }
 
     return value;
   }
 
-  function assertValidCitizenId(citizenId) {
-    const value = normalizeString(citizenId)
-      .replace(/[\s-]/g, "");
+  function validateThaiCitizenId(value) {
+    const digits = text(value).replace(/\D/g, "");
 
-    if (!/^\d{13}$/.test(value)) {
-      throw new FinoraError(
-        "INVALID_CITIZEN_ID",
-        "หมายเลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก"
-      );
+    if (!/^\d{13}$/.test(digits)) {
+      return false;
     }
 
-    let sum = 0;
+    let total = 0;
 
-    for (let index = 0; index < 12; index++) {
-      sum +=
-        Number(value.charAt(index)) *
-        (13 - index);
+    for (let i = 0; i < 12; i += 1) {
+      total += Number(digits[i]) * (13 - i);
     }
 
-    const checkDigit =
-      (11 - (sum % 11)) % 10;
-
-    if (checkDigit !== Number(value.charAt(12))) {
-      throw new FinoraError(
-        "INVALID_CITIZEN_ID_CHECKSUM",
-        "หมายเลขบัตรประชาชนไม่ผ่านการตรวจสอบ"
-      );
-    }
-
-    return value;
+    return ((11 - (total % 11)) % 10) === Number(digits[12]);
   }
 
-  function assertValidPassword(password) {
+  function validatePassword(password) {
     const value = String(password || "");
+    const min = Number(CONFIG.PASSWORD_MIN_LENGTH) || 10;
+    const max = Number(CONFIG.PASSWORD_MAX_LENGTH) || 128;
 
-    if (
-      value.length < CONFIG.PASSWORD_MIN_LENGTH ||
-      value.length > CONFIG.PASSWORD_MAX_LENGTH
-    ) {
+    if (value.length < min || value.length > max) {
       throw new FinoraError(
-        "WEAK_PASSWORD",
-        "รหัสผ่านต้องมีความยาว 10–128 ตัวอักษร"
+        "INVALID_PASSWORD_LENGTH",
+        "รหัสผ่านต้องมีความยาว " + min + "–" + max + " ตัวอักษร"
       );
     }
 
     if (
-      !/[A-Za-z]/.test(value) ||
-      !/\d/.test(value)
+      !/[a-z]/.test(value) ||
+      !/[A-Z]/.test(value) ||
+      !/[0-9]/.test(value)
     ) {
       throw new FinoraError(
         "WEAK_PASSWORD",
-        "รหัสผ่านต้องมีตัวอักษรภาษาอังกฤษและตัวเลข"
+        "รหัสผ่านต้องมีตัวพิมพ์เล็ก ตัวพิมพ์ใหญ่ และตัวเลข"
       );
     }
 
     return value;
+  }
+
+  function calculateAge(dateOfBirth) {
+    const birth = new Date(dateOfBirth);
+
+    if (!dateOfBirth || Number.isNaN(birth.getTime())) {
+      return -1;
+    }
+
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const monthDiff = now.getMonth() - birth.getMonth();
+
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && now.getDate() < birth.getDate())
+    ) {
+      age -= 1;
+    }
+
+    return age;
   }
 
   function validateRegistration(data) {
-    if (!isPlainObject(data)) {
+    if (!isObject(data)) {
       throw new FinoraError(
-        "INVALID_REGISTRATION_DATA",
-        "ไม่พบข้อมูลสมัครสมาชิก"
+        "INVALID_REGISTRATION",
+        "ข้อมูลสมัครสมาชิกไม่ถูกต้อง"
       );
     }
 
-    const title = normalizeString(data.title);
+    const fullName = text(data.fullName || data.name);
+    const email = validateEmail(data.email);
+    const phone = validatePhone(data.phone);
+    const password = validatePassword(data.password);
 
-    if (!VALID_TITLES.includes(title)) {
+    if (fullName.length < 2 || fullName.length > 120) {
       throw new FinoraError(
-        "INVALID_TITLE",
-        "กรุณาเลือกคำนำหน้าที่ถูกต้อง"
+        "INVALID_NAME",
+        "กรุณากรอกชื่อและนามสกุลให้ถูกต้อง"
       );
     }
-
-    const fullName = normalizeString(data.fullName);
 
     if (
-      fullName.length < 2 ||
-      fullName.length > 150
+      data.dateOfBirth &&
+      calculateAge(data.dateOfBirth) < (Number(CONFIG.MIN_AGE) || 20)
     ) {
       throw new FinoraError(
-        "INVALID_FULL_NAME",
-        "กรุณากรอกชื่อ-นามสกุลให้ถูกต้อง"
+        "AGE_REQUIREMENT_NOT_MET",
+        "ผู้สมัครต้องมีอายุอย่างน้อย " +
+          (Number(CONFIG.MIN_AGE) || 20) +
+          " ปี"
       );
     }
 
-    if (!isDateValid(data.dob)) {
+    if (data.citizenId && !validateThaiCitizenId(data.citizenId)) {
       throw new FinoraError(
-        "INVALID_DOB",
-        "กรุณาเลือกวันเกิดให้ถูกต้อง"
+        "INVALID_CITIZEN_ID",
+        "เลขประจำตัวประชาชนไม่ถูกต้อง"
       );
     }
 
-    const age = calculateAge(data.dob);
-
-    if (age === null || age < getMinimumAge()) {
-      throw new FinoraError(
-        "AGE_NOT_ELIGIBLE",
-        "อายุยังไม่ถึงเกณฑ์ที่กำหนด"
-      );
-    }
-
-    const citizenId = assertValidCitizenId(
-      data.citizenId
-    );
-
-    const phone = assertValidPhone(data.phone);
-
-    const email = assertValidEmail(data.email);
-
-    const password = assertValidPassword(
-      data.password
-    );
-
-    if (
-      data.termsAccepted !== true &&
-      data.termsAccepted !== "true"
-    ) {
+    if (data.acceptTerms !== true && data.termsAccepted !== true) {
       throw new FinoraError(
         "TERMS_REQUIRED",
         "กรุณายอมรับข้อกำหนดและเงื่อนไขการใช้บริการ"
       );
     }
 
-    if (
-      data.privacyAcknowledged !== true &&
-      data.privacyAcknowledged !== "true"
-    ) {
+    if (data.acceptPrivacy !== true && data.privacyAccepted !== true) {
       throw new FinoraError(
         "PRIVACY_REQUIRED",
         "กรุณารับทราบประกาศความเป็นส่วนตัว"
       );
     }
 
-    return {
-      title: title,
+    return Object.assign({}, data, {
       fullName: fullName,
-      dob: data.dob,
-      citizenId: citizenId,
-      phone: phone,
       email: email,
+      phone: phone,
       password: password,
-      username: normalizeString(data.username),
-      termsAccepted: true,
-      privacyAcknowledged: true
-    };
+      termsVersion: text(data.termsVersion || CONFIG.TERMS_VERSION),
+      privacyVersion: text(data.privacyVersion || CONFIG.PRIVACY_VERSION)
+    });
+  }
+
+  function storage(name) {
+    try {
+      return window[name];
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function storageGet(name, key) {
+    const target = storage(name);
+
+    if (!target) {
+      return null;
+    }
+
+    try {
+      return target.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function storageSet(name, key, value) {
+    const target = storage(name);
+
+    if (!target) {
+      throw new FinoraError(
+        "STORAGE_UNAVAILABLE",
+        "เบราว์เซอร์ไม่อนุญาตให้จัดเก็บสถานะการเข้าสู่ระบบ"
+      );
+    }
+
+    try {
+      target.setItem(key, String(value));
+    } catch (error) {
+      throw new FinoraError(
+        "STORAGE_WRITE_FAILED",
+        "ไม่สามารถบันทึกสถานะการเข้าสู่ระบบได้"
+      );
+    }
+  }
+
+  function storageRemove(name, key) {
+    const target = storage(name);
+
+    if (!target) {
+      return;
+    }
+
+    try {
+      target.removeItem(key);
+    } catch (error) {
+      // no-op
+    }
+  }
+
+  function clearTokenKeys() {
+    ["localStorage", "sessionStorage"].forEach(function (name) {
+      storageRemove(name, CONFIG.SESSION_TOKEN_KEY);
+      storageRemove(name, CONFIG.SESSION_EXPIRY_KEY);
+      storageRemove(name, CONFIG.REMEMBER_SESSION_KEY);
+    });
+  }
+
+  function tokenExpiryValue(value) {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    if (
+      typeof value === "number" ||
+      /^\d+$/.test(String(value))
+    ) {
+      const n = Number(value);
+      return n < 1000000000000 ? n * 1000 : n;
+    }
+
+    const parsed = new Date(value).getTime();
+
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  const session = {
+    getToken() {
+      const token =
+        storageGet("localStorage", CONFIG.SESSION_TOKEN_KEY) ||
+        storageGet("sessionStorage", CONFIG.SESSION_TOKEN_KEY);
+
+      if (!token) {
+        return "";
+      }
+
+      const expiryRaw =
+        storageGet("localStorage", CONFIG.SESSION_EXPIRY_KEY) ||
+        storageGet("sessionStorage", CONFIG.SESSION_EXPIRY_KEY);
+
+      const expiry = tokenExpiryValue(expiryRaw);
+
+      if (expiry && Date.now() >= expiry) {
+        this.clear();
+        emit("finora:session-expired", {});
+        return "";
+      }
+
+      return token;
+    },
+
+    set(token, options) {
+      const opts = options || {};
+      const sessionToken = text(token);
+
+      if (!sessionToken) {
+        throw new FinoraError(
+          "SESSION_TOKEN_MISSING",
+          "ระบบไม่ได้รับ session token จากเซิร์ฟเวอร์"
+        );
+      }
+
+      const remember = opts.rememberMe === true;
+      const defaultTtl = remember
+        ? Number(CONFIG.REMEMBER_SESSION_TTL_SECONDS)
+        : Number(CONFIG.SESSION_TTL_SECONDS);
+
+      const expiry =
+        tokenExpiryValue(opts.expiresAt) ||
+        Date.now() + (defaultTtl || 7200) * 1000;
+
+      clearTokenKeys();
+
+      const target = remember ? "localStorage" : "sessionStorage";
+
+      storageSet(target, CONFIG.SESSION_TOKEN_KEY, sessionToken);
+      storageSet(target, CONFIG.SESSION_EXPIRY_KEY, expiry);
+      storageSet(
+        target,
+        CONFIG.REMEMBER_SESSION_KEY,
+        remember ? "true" : "false"
+      );
+
+      STATE.sessionExpiry = expiry;
+      STATE.rememberMe = remember;
+
+      return true;
+    },
+
+    clear() {
+      clearTokenKeys();
+
+      STATE.user = null;
+      STATE.isAuthenticated = false;
+      STATE.sessionExpiry = null;
+      STATE.rememberMe = false;
+
+      emit("finora:session-changed", {
+        authenticated: false,
+        user: null
+      });
+    },
+
+    hasSession() {
+      return !!this.getToken();
+    },
+
+    isRemembered() {
+      return storageGet(
+        "localStorage",
+        CONFIG.REMEMBER_SESSION_KEY
+      ) === "true";
+    }
+  };
+
+  function getApiUrl() {
+    const value = text(CONFIG.API_URL).replace(/\/+$/, "");
+
+    if (!value) {
+      throw new FinoraError(
+        "API_NOT_CONFIGURED",
+        "ยังไม่ได้ตั้งค่า URL ของ FINORA API ใน index.html"
+      );
+    }
+
+    if (
+      !/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/i.test(
+        value
+      )
+    ) {
+      throw new FinoraError(
+        "INVALID_API_URL",
+        "API_URL ต้องเป็น URL Google Apps Script Web App ที่ลงท้ายด้วย /exec"
+      );
+    }
+
+    return value;
   }
 
   function normalizeError(error) {
@@ -623,1359 +585,115 @@
     if (error && error.name === "AbortError") {
       return new FinoraError(
         "API_TIMEOUT",
-        "ระบบตอบกลับช้าเกินกำหนด กรุณาลองใหม่อีกครั้ง"
+        "การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่"
       );
     }
 
-    return new FinoraError(
-      "NETWORK_OR_CORS_ERROR",
-      "ไม่สามารถเชื่อมต่อ FINORA API ได้ กรุณาตรวจสอบอินเทอร์เน็ต URL ของ Web App และการตั้งค่า CORS"
-    );
+    const message =
+      error && error.message
+        ? error.message
+        : "เกิดข้อผิดพลาดในการเชื่อมต่อ FINORA";
+
+    return new FinoraError("NETWORK_ERROR", message, error || null);
   }
 
-  /* ================================================================
-   * 4. SHARED LOADING SPINNER AND MODAL STYLES
-   *
-   * One consistent four-dot spinner is used throughout the system.
-   * The design follows the supplied reference:
-   * blue, red, purple and green dots.
-   * ================================================================ */
+  function parseApiResponse(body, action) {
+    const parsed = typeof body === "string"
+      ? safeJsonParse(body)
+      : body;
 
-  function installUIStyles() {
-    if (
-      document.getElementById(
-        "finora-shared-ui-styles"
-      )
-    ) {
-      return;
+    if (!parsed || typeof parsed !== "object") {
+      throw new FinoraError(
+        "INVALID_API_RESPONSE",
+        "API ส่งข้อมูลที่ไม่ใช่ JSON กรุณาตรวจสอบ URL และสิทธิ์ Deploy",
+        { action: action }
+      );
     }
 
-    const style = document.createElement("style");
+    const failed =
+      parsed.ok === false ||
+      parsed.success === false ||
+      parsed.status === "error";
 
-    style.id = "finora-shared-ui-styles";
+    if (failed) {
+      const nested = isObject(parsed.error) ? parsed.error : {};
+      const code = text(
+        nested.code ||
+        parsed.code ||
+        parsed.errorCode ||
+        "API_ERROR"
+      );
 
-    style.textContent = `
-      .finora-ui-host {
-        font-family: Inter, "IBM Plex Sans Thai",
-          "Noto Sans Thai", system-ui, sans-serif;
+      const message = text(
+        nested.message ||
+        parsed.message ||
+        parsed.errorMessage ||
+        (typeof parsed.error === "string" ? parsed.error : "")
+      ) || "เซิร์ฟเวอร์ไม่สามารถดำเนินการได้";
+
+      const error = new FinoraError(code, message, parsed);
+
+      if (AUTH_ERROR_CODES.has(code)) {
+        session.clear();
       }
 
-      .finora-loading-overlay,
-      .finora-modal-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 99990;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 22px;
-      }
+      emit("finora:api-error", {
+        action: action,
+        code: error.code,
+        message: error.message
+      });
 
-      .finora-loading-overlay {
-        background: rgba(245, 247, 250, 0.94);
-        backdrop-filter: blur(5px);
-        opacity: 0;
-        visibility: hidden;
-        transition:
-          opacity .2s ease,
-          visibility .2s ease;
-      }
+      throw error;
+    }
 
-      .finora-loading-overlay.is-visible {
-        opacity: 1;
-        visibility: visible;
-      }
+    if (parsed.ok === true || parsed.success === true) {
+      return parsed.data !== undefined ? parsed.data : parsed;
+    }
 
-      .finora-loading-card {
-        width: min(100%, 360px);
-        padding: 30px 24px;
-        border: 1px solid #e7ebf0;
-        border-radius: 22px;
-        background: #ffffff;
-        box-shadow: 0 20px 70px rgba(20, 36, 64, .12);
-        text-align: center;
-      }
-
-      .finora-four-dot-spinner {
-        position: relative;
-        width: 116px;
-        height: 112px;
-        margin: 0 auto 20px;
-      }
-
-      .finora-four-dot-spinner .finora-dot {
-        position: absolute;
-        display: block;
-        border-radius: 50%;
-        transform-origin: center;
-        animation: finora-dot-pulse 1.15s ease-in-out infinite;
-      }
-
-      .finora-four-dot-spinner .finora-dot-blue {
-        width: 48px;
-        height: 48px;
-        left: 8px;
-        top: 10px;
-        background: #03a9f4;
-        animation-delay: 0s;
-      }
-
-      .finora-four-dot-spinner .finora-dot-red {
-        width: 36px;
-        height: 36px;
-        right: 9px;
-        top: 15px;
-        background: #ff5b63;
-        animation-delay: .15s;
-      }
-
-      .finora-four-dot-spinner .finora-dot-purple {
-        width: 28px;
-        height: 28px;
-        left: 19px;
-        bottom: 12px;
-        background: #cc63f3;
-        animation-delay: .3s;
-      }
-
-      .finora-four-dot-spinner .finora-dot-green {
-        width: 48px;
-        height: 48px;
-        right: 0;
-        bottom: 0;
-        background: #8bcf20;
-        animation-delay: .45s;
-      }
-
-      @keyframes finora-dot-pulse {
-        0%, 100% {
-          transform: scale(.9);
-          opacity: .8;
-        }
-        50% {
-          transform: scale(1.06);
-          opacity: 1;
-        }
-      }
-
-      .finora-loading-title {
-        color: #172033;
-        font-size: 17px;
-        line-height: 1.65;
-        font-weight: 650;
-        margin: 0;
-      }
-
-      .finora-loading-message {
-        color: #66758a;
-        font-size: 13px;
-        line-height: 1.8;
-        margin: 7px 0 0;
-        word-break: break-word;
-      }
-
-      .finora-modal-overlay {
-        z-index: 100000;
-        padding: 18px;
-        background: rgba(13, 24, 42, .52);
-        backdrop-filter: blur(6px);
-        opacity: 0;
-        visibility: hidden;
-        transition:
-          opacity .22s ease,
-          visibility .22s ease;
-      }
-
-      .finora-modal-overlay.is-visible {
-        opacity: 1;
-        visibility: visible;
-      }
-
-      .finora-modal-card {
-        display: flex;
-        flex-direction: column;
-        width: min(100%, 480px);
-        max-height: min(88vh, 800px);
-        overflow: hidden;
-        background: #ffffff;
-        border: 1px solid rgba(226, 232, 240, .9);
-        border-radius: 22px;
-        box-shadow: 0 24px 90px rgba(8, 20, 40, .23);
-        transform: translateY(12px) scale(.98);
-        transition: transform .22s ease;
-      }
-
-      .finora-modal-overlay.is-visible .finora-modal-card {
-        transform: translateY(0) scale(1);
-      }
-
-      .finora-modal-header {
-        display: flex;
-        align-items: flex-start;
-        gap: 13px;
-        padding: 23px 24px 14px;
-      }
-
-      .finora-modal-icon {
-        flex: 0 0 40px;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 13px;
-        background: #e9f7f5;
-        color: #168a83;
-        font-size: 19px;
-      }
-
-      .finora-modal-icon.is-error {
-        background: #fff0f0;
-        color: #d93045;
-      }
-
-      .finora-modal-icon.is-warning {
-        background: #fff7e7;
-        color: #b77910;
-      }
-
-      .finora-modal-title {
-        flex: 1;
-        min-width: 0;
-        margin: 1px 0 0;
-        color: #142440;
-        font-size: 19px;
-        line-height: 1.55;
-        font-weight: 750;
-        overflow-wrap: anywhere;
-      }
-
-      .finora-modal-close {
-        flex: 0 0 34px;
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 10px;
-        background: transparent;
-        color: #7a8799;
-        font-size: 22px;
-        cursor: pointer;
-      }
-
-      .finora-modal-close:hover {
-        background: #f1f5f9;
-        color: #142440;
-      }
-
-      .finora-modal-body {
-        overflow-y: auto;
-        padding: 0 24px 20px;
-        color: #5c6a7e;
-        font-size: 14px;
-        line-height: 1.9;
-        overflow-wrap: anywhere;
-      }
-
-      .finora-modal-body p {
-        margin: 0 0 12px;
-      }
-
-      .finora-modal-footer {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        padding: 16px 24px 22px;
-        border-top: 1px solid #edf1f5;
-      }
-
-      .finora-modal-button {
-        min-height: 43px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 11px 17px;
-        border: 1px solid #dce3ec;
-        border-radius: 11px;
-        background: #ffffff;
-        color: #344259;
-        font: inherit;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-        transition:
-          background .15s ease,
-          opacity .15s ease,
-          transform .15s ease;
-      }
-
-      .finora-modal-button:hover {
-        background: #f6f8fb;
-      }
-
-      .finora-modal-button:active {
-        transform: scale(.98);
-      }
-
-      .finora-modal-button.primary {
-        background: #168a83;
-        border-color: #168a83;
-        color: #ffffff;
-      }
-
-      .finora-modal-button.primary:hover {
-        background: #0f756f;
-      }
-
-      .finora-modal-button.danger {
-        background: #d93045;
-        border-color: #d93045;
-        color: #ffffff;
-      }
-
-      .finora-modal-button:disabled {
-        opacity: .45;
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      .finora-toast-container {
-        position: fixed;
-        top: 18px;
-        right: 18px;
-        z-index: 100100;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 9px;
-        width: min(390px, calc(100vw - 36px));
-        pointer-events: none;
-      }
-
-      .finora-toast {
-        display: flex;
-        align-items: flex-start;
-        gap: 11px;
-        width: 100%;
-        padding: 14px 16px;
-        border: 1px solid #e1e8ef;
-        border-radius: 14px;
-        background: #ffffff;
-        color: #26364b;
-        box-shadow: 0 12px 40px rgba(13, 31, 54, .12);
-        font-size: 13px;
-        line-height: 1.75;
-        animation: finora-toast-in .22s ease;
-        pointer-events: auto;
-      }
-
-      .finora-toast i {
-        flex: 0 0 18px;
-        margin-top: 2px;
-        font-size: 16px;
-      }
-
-      .finora-toast.success i {
-        color: #168a83;
-      }
-
-      .finora-toast.error i {
-        color: #d93045;
-      }
-
-      .finora-toast.warning i {
-        color: #bf8518;
-      }
-
-      .finora-toast.info i {
-        color: #3775bd;
-      }
-
-      @keyframes finora-toast-in {
-        from {
-          transform: translateY(-8px);
-          opacity: 0;
-        }
-        to {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      .finora-document-scroll {
-        max-height: 48vh;
-        min-height: 180px;
-        overflow-y: auto;
-        padding: 16px;
-        border: 1px solid #e2e8f0;
-        border-radius: 13px;
-        background: #f8fafc;
-        color: #344259;
-        line-height: 1.9;
-        font-size: 13px;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
-      }
-
-      .finora-document-warning {
-        margin-top: 12px;
-        color: #cf263b;
-        font-size: 12px;
-        font-weight: 650;
-        line-height: 1.75;
-      }
-
-      @media (max-width: 520px) {
-        .finora-modal-header {
-          padding: 19px 18px 12px;
-        }
-
-        .finora-modal-body {
-          padding: 0 18px 18px;
-        }
-
-        .finora-modal-footer {
-          padding: 14px 18px 18px;
-        }
-
-        .finora-modal-title {
-          font-size: 17px;
-        }
-
-        .finora-modal-button {
-          flex: 1;
-        }
-
-        .finora-loading-card {
-          padding: 27px 18px;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        .finora-loading-overlay,
-        .finora-modal-overlay,
-        .finora-modal-card,
-        .finora-toast {
-          transition: none !important;
-          animation: none !important;
-        }
-
-        .finora-four-dot-spinner .finora-dot {
-          animation: none !important;
-        }
-      }
-    `;
-
-    (document.head || document.documentElement)
-      .appendChild(style);
+    // Supports APIs that return the result object directly.
+    return parsed;
   }
 
-  function ensureUIHost() {
-    installUIStyles();
-
-    let host = document.getElementById(
-      "finora-ui-host"
-    );
-
-    if (host) {
-      return host;
-    }
-
-    host = document.createElement("div");
-    host.id = "finora-ui-host";
-    host.className = "finora-ui-host";
-
-    const loadingOverlay = document.createElement("div");
-    loadingOverlay.id = "finora-global-loading";
-    loadingOverlay.className =
-      "finora-loading-overlay";
-
-    loadingOverlay.setAttribute("role", "status");
-    loadingOverlay.setAttribute("aria-live", "polite");
-    loadingOverlay.setAttribute("aria-hidden", "true");
-
-    loadingOverlay.innerHTML = `
-      <div class="finora-loading-card">
-        <div class="finora-four-dot-spinner"
-             aria-hidden="true">
-          <span class="finora-dot finora-dot-blue"></span>
-          <span class="finora-dot finora-dot-red"></span>
-          <span class="finora-dot finora-dot-purple"></span>
-          <span class="finora-dot finora-dot-green"></span>
-        </div>
-        <p class="finora-loading-title"
-           id="finora-loading-title">
-          กำลังโหลดข้อมูลระบบ
-        </p>
-        <p class="finora-loading-message"
-           id="finora-loading-message">
-          กรุณารอสักครู่
-        </p>
-      </div>
-    `;
-
-    const modalOverlay = document.createElement("div");
-    modalOverlay.id = "finora-modal-overlay";
-    modalOverlay.className = "finora-modal-overlay";
-
-    modalOverlay.setAttribute("aria-hidden", "true");
-
-    const toastContainer = document.createElement("div");
-    toastContainer.id = "finora-toast-container";
-    toastContainer.className =
-      "finora-toast-container";
-
-    toastContainer.setAttribute(
-      "aria-live",
-      "polite"
-    );
-
-    host.appendChild(loadingOverlay);
-    host.appendChild(modalOverlay);
-    host.appendChild(toastContainer);
-
-    (document.body || document.documentElement)
-      .appendChild(host);
-
-    return host;
-  }
-
-  const ui = {
-    showLoading(message, detail) {
-      ensureUIHost();
-
-      APP_STATE.loadingCount++;
-
-      const overlay = document.getElementById(
-        "finora-global-loading"
-      );
-
-      const title = document.getElementById(
-        "finora-loading-title"
-      );
-
-      const description = document.getElementById(
-        "finora-loading-message"
-      );
-
-      if (title) {
-        title.textContent =
-          normalizeString(message) ||
-          "กำลังโหลดข้อมูลระบบ";
-      }
-
-      if (description) {
-        description.textContent =
-          normalizeString(detail) ||
-          "กรุณารอสักครู่";
-      }
-
-      if (overlay) {
-        overlay.classList.add("is-visible");
-        overlay.setAttribute("aria-hidden", "false");
-      }
-
-      dispatchEvent(
-        "finora:loading",
-        {
-          active: true,
-          message: normalizeString(message)
-        }
-      );
-    },
-
-    hideLoading() {
-      if (APP_STATE.loadingCount > 0) {
-        APP_STATE.loadingCount--;
-      }
-
-      if (APP_STATE.loadingCount > 0) {
-        return;
-      }
-
-      const overlay = document.getElementById(
-        "finora-global-loading"
-      );
-
-      if (overlay) {
-        overlay.classList.remove("is-visible");
-        overlay.setAttribute("aria-hidden", "true");
-      }
-
-      dispatchEvent(
-        "finora:loading",
-        {
-          active: false
-        }
-      );
-    },
-
-    setLoadingMessage(message, detail) {
-      ensureUIHost();
-
-      const title = document.getElementById(
-        "finora-loading-title"
-      );
-
-      const description = document.getElementById(
-        "finora-loading-message"
-      );
-
-      if (title) {
-        title.textContent =
-          normalizeString(message) ||
-          "กำลังโหลดข้อมูลระบบ";
-      }
-
-      if (description) {
-        description.textContent =
-          normalizeString(detail) ||
-          "กรุณารอสักครู่";
-      }
-    },
-
-    toast(message, type, duration) {
-      ensureUIHost();
-
-      const container = document.getElementById(
-        "finora-toast-container"
-      );
-
-      if (!container) {
-        return;
-      }
-
-      const allowedTypes = [
-        "success",
-        "error",
-        "warning",
-        "info"
-      ];
-
-      const toastType = allowedTypes.includes(type)
-        ? type
-        : "info";
-
-      const iconMap = {
-        success: "fa-circle-check",
-        error: "fa-circle-exclamation",
-        warning: "fa-triangle-exclamation",
-        info: "fa-circle-info"
-      };
-
-      const toast = document.createElement("div");
-      toast.className =
-        "finora-toast " + toastType;
-
-      const icon = document.createElement("i");
-      icon.className =
-        "fa-solid " + iconMap[toastType];
-      icon.setAttribute("aria-hidden", "true");
-
-      const text = document.createElement("div");
-      text.textContent = normalizeString(message);
-
-      toast.appendChild(icon);
-      toast.appendChild(text);
-      container.appendChild(toast);
-
-      const timeout = Number(duration) > 0
-        ? Number(duration)
-        : 3500;
-
-      window.setTimeout(
-        function () {
-          if (toast.parentNode) {
-            toast.parentNode.removeChild(toast);
-          }
-        },
-        timeout
-      );
-    },
-
-    modal(options) {
-      ensureUIHost();
-
-      const settings = Object.assign(
-        {
-          title: "แจ้งให้ทราบ",
-          message: "",
-          type: "info",
-          confirmText: "ตกลง",
-          cancelText: "",
-          closeOnBackdrop: false,
-          closeOnEscape: true
-        },
-        options || {}
-      );
-
-      closeActiveModal();
-
-      const overlay = document.getElementById(
-        "finora-modal-overlay"
-      );
-
-      overlay.replaceChildren();
-
-      const card = document.createElement("div");
-      card.className = "finora-modal-card";
-      card.setAttribute("role", "dialog");
-      card.setAttribute("aria-modal", "true");
-
-      const header = document.createElement("div");
-      header.className = "finora-modal-header";
-
-      const iconBox = document.createElement("div");
-      iconBox.className = "finora-modal-icon";
-
-      const icon = document.createElement("i");
-      icon.className = settings.type === "error"
-        ? "fa-solid fa-circle-exclamation"
-        : settings.type === "warning"
-          ? "fa-solid fa-triangle-exclamation"
-          : settings.type === "success"
-            ? "fa-solid fa-circle-check"
-            : "fa-solid fa-circle-info";
-
-      icon.setAttribute("aria-hidden", "true");
-
-      if (settings.type === "error") {
-        iconBox.classList.add("is-error");
-      } else if (settings.type === "warning") {
-        iconBox.classList.add("is-warning");
-      }
-
-      iconBox.appendChild(icon);
-
-      const title = document.createElement("h2");
-      title.className = "finora-modal-title";
-      title.textContent = settings.title;
-
-      header.appendChild(iconBox);
-      header.appendChild(title);
-
-      const closeButton = document.createElement("button");
-      closeButton.type = "button";
-      closeButton.className = "finora-modal-close";
-      closeButton.setAttribute(
-        "aria-label",
-        "ปิดหน้าต่าง"
-      );
-      closeButton.textContent = "×";
-      header.appendChild(closeButton);
-
-      const body = document.createElement("div");
-      body.className = "finora-modal-body";
-      body.textContent = normalizeString(
-        settings.message
-      );
-
-      const footer = document.createElement("div");
-      footer.className = "finora-modal-footer";
-
-      if (settings.cancelText) {
-        const cancelButton =
-          document.createElement("button");
-
-        cancelButton.type = "button";
-        cancelButton.className =
-          "finora-modal-button";
-        cancelButton.textContent =
-          settings.cancelText;
-
-        footer.appendChild(cancelButton);
-
-        cancelButton.addEventListener(
-          "click",
-          function () {
-            finish(false);
-          }
-        );
-      }
-
-      const confirmButton =
-        document.createElement("button");
-
-      confirmButton.type = "button";
-      confirmButton.className =
-        "finora-modal-button primary";
-
-      confirmButton.textContent =
-        settings.confirmText;
-
-      footer.appendChild(confirmButton);
-
-      card.appendChild(header);
-      card.appendChild(body);
-      card.appendChild(footer);
-
-      overlay.appendChild(card);
-
-      let finished = false;
-
-      function finish(confirmed) {
-        if (finished) {
-          return;
-        }
-
-        finished = true;
-
-        overlay.classList.remove("is-visible");
-        overlay.setAttribute("aria-hidden", "true");
-
-        document.removeEventListener(
-          "keydown",
-          handleKeyDown
-        );
-
-        activeModalCleanup = null;
-
-        if (typeof settings.onClose === "function") {
-          settings.onClose(confirmed);
-        }
-
-        if (
-          confirmed &&
-          typeof settings.onConfirm === "function"
-        ) {
-          settings.onConfirm();
-        }
-
-        if (
-          !confirmed &&
-          typeof settings.onCancel === "function"
-        ) {
-          settings.onCancel();
-        }
-
-        resolvePromise(confirmed);
-      }
-
-      function handleKeyDown(event) {
-        if (
-          event.key === "Escape" &&
-          settings.closeOnEscape
-        ) {
-          finish(false);
-        }
-
-        if (event.key === "Enter") {
-          if (
-            document.activeElement === confirmButton
-          ) {
-            finish(true);
-          }
-        }
-      }
-
-      closeButton.addEventListener(
-        "click",
-        function () {
-          finish(false);
-        }
-      );
-
-      confirmButton.addEventListener(
-        "click",
-        function () {
-          finish(true);
-        }
-      );
-
-      overlay.onclick = function (event) {
-        if (
-          event.target === overlay &&
-          settings.closeOnBackdrop
-        ) {
-          finish(false);
-        }
-      };
-
-      document.addEventListener(
-        "keydown",
-        handleKeyDown
-      );
-
-      overlay.classList.add("is-visible");
-      overlay.setAttribute("aria-hidden", "false");
-
-      let resolvePromise;
-
-      const promise = new Promise(
-        function (resolve) {
-          resolvePromise = resolve;
-        }
-      );
-
-      activeModalCleanup = function () {
-        finish(false);
-      };
-
-      window.requestAnimationFrame(
-        function () {
-          confirmButton.focus();
-        }
-      );
-
-      return promise;
-    },
-
-    showDocumentModal(options) {
-      ensureUIHost();
-
-      const settings = Object.assign(
-        {
-          title: "เอกสาร",
-          content: "",
-          agreeText: "ยินยอม",
-          cancelText: "ยกเลิก",
-          warningText:
-            "กรุณาเลื่อนลงด้านล่างสุดและกดยินยอม",
-          requireScrollToBottom: true
-        },
-        options || {}
-      );
-
-      closeActiveModal();
-
-      const overlay = document.getElementById(
-        "finora-modal-overlay"
-      );
-
-      overlay.replaceChildren();
-
-      const card = document.createElement("div");
-      card.className = "finora-modal-card";
-      card.setAttribute("role", "dialog");
-      card.setAttribute("aria-modal", "true");
-
-      const header = document.createElement("div");
-      header.className = "finora-modal-header";
-
-      const iconBox = document.createElement("div");
-      iconBox.className = "finora-modal-icon";
-
-      const icon = document.createElement("i");
-      icon.className = "fa-solid fa-file-shield";
-      icon.setAttribute("aria-hidden", "true");
-
-      iconBox.appendChild(icon);
-
-      const title = document.createElement("h2");
-      title.className = "finora-modal-title";
-      title.textContent = settings.title;
-
-      header.appendChild(iconBox);
-      header.appendChild(title);
-
-      const closeButton = document.createElement("button");
-      closeButton.type = "button";
-      closeButton.className = "finora-modal-close";
-      closeButton.setAttribute(
-        "aria-label",
-        "ปิดหน้าต่าง"
-      );
-      closeButton.textContent = "×";
-      header.appendChild(closeButton);
-
-      const body = document.createElement("div");
-      body.className = "finora-modal-body";
-
-      const scrollArea = document.createElement("div");
-      scrollArea.className = "finora-document-scroll";
-      scrollArea.tabIndex = 0;
-
-      /*
-       * Use textContent rather than innerHTML.
-       * The terms/privacy copy remains plain text to avoid
-       * injecting arbitrary HTML into the modal.
-       */
-      if (settings.content instanceof Node) {
-        scrollArea.appendChild(
-          settings.content.cloneNode(true)
-        );
-      } else {
-        scrollArea.textContent = String(
-          settings.content || ""
-        );
-      }
-
-      const warning = document.createElement("div");
-      warning.className = "finora-document-warning";
-      warning.textContent = settings.warningText;
-
-      body.appendChild(scrollArea);
-      body.appendChild(warning);
-
-      const footer = document.createElement("div");
-      footer.className = "finora-modal-footer";
-
-      const cancelButton = document.createElement("button");
-      cancelButton.type = "button";
-      cancelButton.className = "finora-modal-button";
-      cancelButton.textContent = settings.cancelText;
-
-      const agreeButton = document.createElement("button");
-      agreeButton.type = "button";
-      agreeButton.className =
-        "finora-modal-button primary";
-      agreeButton.textContent = settings.agreeText;
-
-      footer.appendChild(cancelButton);
-      footer.appendChild(agreeButton);
-
-      card.appendChild(header);
-      card.appendChild(body);
-      card.appendChild(footer);
-
-      overlay.appendChild(card);
-
-      let finished = false;
-
-      let hasReachedBottom =
-        !settings.requireScrollToBottom;
-
-      function updateScrollState() {
-        const scrollable =
-          scrollArea.scrollHeight >
-          scrollArea.clientHeight + 2;
-
-        if (
-          !settings.requireScrollToBottom ||
-          !scrollable
-        ) {
-          hasReachedBottom = true;
-        } else {
-          hasReachedBottom =
-            scrollArea.scrollTop +
-            scrollArea.clientHeight >=
-            scrollArea.scrollHeight - 4;
-        }
-
-        agreeButton.disabled =
-          !hasReachedBottom;
-
-        warning.style.display =
-          hasReachedBottom
-            ? "none"
-            : "block";
-      }
-
-      function finish(accepted) {
-        if (finished) {
-          return;
-        }
-
-        finished = true;
-
-        overlay.classList.remove("is-visible");
-        overlay.setAttribute("aria-hidden", "true");
-
-        document.removeEventListener(
-          "keydown",
-          handleKeyDown
-        );
-
-        activeModalCleanup = null;
-
-        if (
-          accepted &&
-          typeof settings.onAgree === "function"
-        ) {
-          settings.onAgree();
-        }
-
-        if (
-          !accepted &&
-          typeof settings.onCancel === "function"
-        ) {
-          settings.onCancel();
-        }
-
-        resolvePromise({
-          accepted: accepted
-        });
-      }
-
-      function handleKeyDown(event) {
-        if (event.key === "Escape") {
-          finish(false);
-        }
-      }
-
-      scrollArea.addEventListener(
-        "scroll",
-        updateScrollState
-      );
-
-      cancelButton.addEventListener(
-        "click",
-        function () {
-          finish(false);
-        }
-      );
-
-      closeButton.addEventListener(
-        "click",
-        function () {
-          finish(false);
-        }
-      );
-
-      agreeButton.addEventListener(
-        "click",
-        function () {
-          if (!hasReachedBottom) {
-            return;
-          }
-
-          finish(true);
-        }
-      );
-
-      overlay.onclick = function (event) {
-        if (event.target === overlay) {
-          finish(false);
-        }
-      };
-
-      document.addEventListener(
-        "keydown",
-        handleKeyDown
-      );
-
-      overlay.classList.add("is-visible");
-      overlay.setAttribute("aria-hidden", "false");
-
-      let resolvePromise;
-
-      const promise = new Promise(
-        function (resolve) {
-          resolvePromise = resolve;
-        }
-      );
-
-      activeModalCleanup = function () {
-        finish(false);
-      };
-
-      updateScrollState();
-
-      window.requestAnimationFrame(
-        function () {
-          scrollArea.focus();
-        }
-      );
-
-      return promise;
-    }
-  };
-
-  function closeActiveModal() {
-    if (typeof activeModalCleanup === "function") {
-      activeModalCleanup();
-    }
-  }
-
-  /* ================================================================
-   * 5. SESSION STORAGE
-   *
-   * Remember me:
-   * - true: localStorage
-   * - false: sessionStorage
-   *
-   * The password, full citizen ID, and registration form are never
-   * stored by this module.
-   *
-   * A token in browser storage remains accessible to page JavaScript.
-   * For a high-security production deployment, prefer a server-side
-   * session broker and HttpOnly Secure cookies.
-   * ================================================================ */
-
-  const session = {
-    getToken() {
-      let token = safeStorageGet(
-        "localStorage",
-        CONFIG.SESSION_STORAGE_KEY
-      );
-
-      let expiry = safeStorageGet(
-        "localStorage",
-        CONFIG.SESSION_EXPIRY_KEY
-      );
-
-      if (token) {
-        if (
-          expiry &&
-          Date.parse(expiry) <= Date.now()
-        ) {
-          this.clear();
-        } else {
-          return token;
-        }
-      }
-
-      token = safeStorageGet(
-        "sessionStorage",
-        CONFIG.SESSION_STORAGE_KEY
-      );
-
-      expiry = safeStorageGet(
-        "sessionStorage",
-        CONFIG.SESSION_EXPIRY_KEY
-      );
-
-      if (
-        token &&
-        expiry &&
-        Date.parse(expiry) <= Date.now()
-      ) {
-        this.clear();
-        return "";
-      }
-
-      return token || "";
-    },
-
-    set(token, rememberMe, expiresAt) {
-      const value = normalizeString(token);
-
-      if (!value) {
-        throw new FinoraError(
-          "SESSION_TOKEN_MISSING",
-          "เซิร์ฟเวอร์ไม่ได้ส่ง Session Token กลับมา"
-        );
-      }
-
-      this.clear();
-
-      const storageName = rememberMe
-        ? "localStorage"
-        : "sessionStorage";
-
-      safeStorageSet(
-        storageName,
-        CONFIG.SESSION_STORAGE_KEY,
-        value
-      );
-
-      if (expiresAt) {
-        safeStorageSet(
-          storageName,
-          CONFIG.SESSION_EXPIRY_KEY,
-          expiresAt
-        );
-      }
-
-      if (rememberMe) {
-        safeStorageSet(
-          "localStorage",
-          CONFIG.REMEMBER_SESSION_KEY,
-          "true"
-        );
-      } else {
-        safeStorageSet(
-          "sessionStorage",
-          CONFIG.REMEMBER_SESSION_KEY,
-          "false"
-        );
-      }
-
-      APP_STATE.sessionExpiry =
-        expiresAt || null;
-
-      APP_STATE.rememberMe = !!rememberMe;
-      APP_STATE.isAuthenticated = true;
-
-      dispatchEvent(
-        "finora:session-changed",
-        {
-          authenticated: true,
-          expiresAt: expiresAt || null,
-          rememberMe: !!rememberMe
-        }
-      );
-
-      return true;
-    },
-
-    clear() {
-      [
-        CONFIG.SESSION_STORAGE_KEY,
-        CONFIG.SESSION_EXPIRY_KEY,
-        CONFIG.REMEMBER_SESSION_KEY
-      ].forEach(
-        function (key) {
-          safeStorageRemove("localStorage", key);
-          safeStorageRemove("sessionStorage", key);
-        }
-      );
-
-      APP_STATE.user = null;
-      APP_STATE.isAuthenticated = false;
-      APP_STATE.sessionExpiry = null;
-      APP_STATE.rememberMe = false;
-
-      dispatchEvent(
-        "finora:session-changed",
-        {
-          authenticated: false
-        }
-      );
-    },
-
-    hasSession() {
-      return !!this.getToken();
-    },
-
-    isRemembered() {
-      return (
-        safeStorageGet(
-          "localStorage",
-          CONFIG.REMEMBER_SESSION_KEY
-        ) === "true"
+  async function call(action, payload, options) {
+    const actionName = text(action);
+
+    if (!actionName) {
+      throw new FinoraError(
+        "ACTION_REQUIRED",
+        "ไม่ได้ระบุ action สำหรับ API"
       );
     }
-  };
 
-  /* ================================================================
-   * 6. HTTP API CLIENT
-   * ================================================================ */
-
-  async function callApi(action, payload, options) {
-    const settings = Object.assign(
+    const opts = Object.assign(
       {
-        loading: true,
-        loadingMessage: "กำลังโหลดข้อมูลระบบ",
-        loadingDetail: "กรุณารอสักครู่",
+        loading: false,
+        loadingMessage: "กำลังติดต่อระบบ",
         timeout: CONFIG.API_TIMEOUT_MS
       },
       options || {}
     );
 
-    const requestPayload = Object.assign(
+    const data = Object.assign(
       {},
-      isPlainObject(payload) ? payload : {},
-      {
-        action: action
-      }
+      isObject(payload) ? payload : {},
+      { action: actionName }
     );
 
+    const apiUrl = getApiUrl();
     let controller = null;
     let timeoutId = null;
-    let didShowLoading = false;
+    let loadingVisible = false;
 
-    if (settings.loading) {
+    if (opts.loading) {
       ui.showLoading(
-        settings.loadingMessage,
-        settings.loadingDetail
+        opts.loadingMessage,
+        opts.loadingDetail || "กรุณารอสักครู่"
       );
 
-      didShowLoading = true;
+      loadingVisible = true;
     }
 
     try {
-      const apiUrl = getCurrentApiUrl();
-
       if (typeof window.fetch !== "function") {
         throw new FinoraError(
           "FETCH_UNAVAILABLE",
@@ -1990,7 +708,9 @@
           function () {
             controller.abort();
           },
-          Number(settings.timeout) || CONFIG.API_TIMEOUT_MS
+          Number(opts.timeout) ||
+            Number(CONFIG.API_TIMEOUT_MS) ||
+            60000
         );
       }
 
@@ -2005,81 +725,37 @@
           headers: {
             "Content-Type": "text/plain;charset=utf-8"
           },
-          body: JSON.stringify(requestPayload),
-          signal: controller
-            ? controller.signal
-            : undefined
+          body: JSON.stringify(data),
+          signal: controller ? controller.signal : undefined
         }
       );
 
       const responseText = await response.text();
-
-      const responseData = safeJsonParse(
-        responseText
-      );
-
-      if (!responseData) {
-        throw new FinoraError(
-          "INVALID_API_RESPONSE",
-          "API ส่งผลลัพธ์ที่ไม่ใช่ JSON กรุณาตรวจสอบ URL, สิทธิ์การ Deploy และการเชื่อมต่อ CORS"
-        );
-      }
-
-      if (responseData.ok !== true) {
-        const errorData = responseData.error || {};
-
-        const apiError = new FinoraError(
-          errorData.code || "API_ERROR",
-          errorData.message ||
-            "เซิร์ฟเวอร์ไม่สามารถดำเนินการได้",
-          errorData
-        );
-
-        if (
-          AUTH_ERROR_CODES.includes(apiError.code)
-        ) {
-          session.clear();
-        }
-
-        dispatchEvent(
-          "finora:api-error",
-          {
-            action: action,
-            code: apiError.code,
-            message: apiError.message
-          }
-        );
-
-        throw apiError;
-      }
+      const result = parseApiResponse(responseText, actionName);
 
       if (!response.ok) {
         throw new FinoraError(
           "HTTP_ERROR",
-          "เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์"
+          "เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์",
+          { status: response.status }
         );
       }
 
-      dispatchEvent(
-        "finora:api-success",
-        {
-          action: action
-        }
-      );
+      emit("finora:api-success", {
+        action: actionName,
+        data: result
+      });
 
-      return responseData.data;
+      return result;
 
     } catch (error) {
       const normalized = normalizeError(error);
 
-      dispatchEvent(
-        "finora:api-error",
-        {
-          action: action,
-          code: normalized.code,
-          message: normalized.message
-        }
-      );
+      emit("finora:api-error", {
+        action: actionName,
+        code: normalized.code,
+        message: normalized.message
+      });
 
       throw normalized;
 
@@ -2088,17 +764,18 @@
         window.clearTimeout(timeoutId);
       }
 
-      if (didShowLoading) {
+      if (loadingVisible) {
         ui.hideLoading();
       }
     }
   }
 
-  function callAuthenticatedApi(
-    action,
-    payload,
-    options
-  ) {
+  function actionCall(actionKey, payload, options) {
+    const actionName = CONFIG.ACTIONS[actionKey] || actionKey;
+    return call(actionName, payload, options);
+  }
+
+  function authCall(actionKey, payload, options) {
     const token = session.getToken();
 
     if (!token) {
@@ -2110,210 +787,639 @@
       );
     }
 
-    const data = Object.assign(
-      {},
-      isPlainObject(payload) ? payload : {},
-      {
-        sessionToken: token
-      }
-    );
-
-    return callApi(
-      action,
-      data,
+    return actionCall(
+      actionKey,
+      Object.assign(
+        {},
+        isObject(payload) ? payload : {},
+        { sessionToken: token }
+      ),
       options
     );
   }
 
-  /* ================================================================
-   * 7. AUTHENTICATION API
-   * ================================================================ */
+  function setAuthenticatedResult(result, rememberMe) {
+    const data =
+      isObject(result) && isObject(result.data)
+        ? result.data
+        : result;
 
-  const auth = {
-    async requestEmailVerification(email) {
-      const normalizedEmail = assertValidEmail(email);
+    const token = text(
+      data && (
+        data.sessionToken ||
+        data.token ||
+        data.accessToken
+      )
+    );
 
-      const result = await callApi(
-        "requestEmailVerification",
-        {
-          email: normalizedEmail
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังส่งลิงก์ยืนยันอีเมล",
-          loadingDetail:
-            normalizedEmail
-        }
-      );
-
-      dispatchEvent(
-        "finora:email-verification-requested",
-        {
-          email: normalizedEmail,
-          expiresAt: result && result.expiresAt
-        }
-      );
-
-      return result;
-    },
-
-    async register(data) {
-      const registration = validateRegistration(data);
-
-      let lineSignupCode =
-        normalizeString(data.lineSignupCode);
-
-      if (!lineSignupCode) {
-        lineSignupCode =
-          getPendingLineSignupCode();
-      }
-
-      const payload = Object.assign(
-        {},
-        registration
-      );
-
-      if (lineSignupCode) {
-        payload.lineSignupCode = lineSignupCode;
-      }
-
-      const result = await callApi(
-        "registerUser",
-        payload,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังสร้างบัญชี FINORA",
-          loadingDetail:
-            "กำลังตรวจสอบข้อมูลสมัครสมาชิก"
-        }
-      );
-
-      clearPendingLineSignupCode();
-
-      dispatchEvent(
-        "finora:registration-complete",
+    if (!token) {
+      throw new FinoraError(
+        "SESSION_TOKEN_MISSING",
+        "เข้าสู่ระบบสำเร็จแต่เซิร์ฟเวอร์ไม่ได้ส่ง session token กลับมา",
         result
       );
+    }
 
-      return result;
+    session.set(token, {
+      rememberMe: rememberMe === true,
+      expiresAt: data.expiresAt || data.sessionExpiresAt || null
+    });
+
+    STATE.user = data.user || data.profile || null;
+    STATE.isAuthenticated = true;
+
+    emit("finora:session-changed", {
+      authenticated: true,
+      user: STATE.user
+    });
+
+    return data;
+  }
+
+  const ui = {
+    host: null,
+    loadingElement: null,
+    toastHost: null,
+
+    ensure() {
+      if (this.host) {
+        return;
+      }
+
+      let host = document.getElementById("finora-ui-host");
+
+      if (!host) {
+        host = document.createElement("div");
+        host.id = "finora-ui-host";
+        document.body.appendChild(host);
+      }
+
+      this.host = host;
+
+      if (!document.getElementById("finora-ui-styles")) {
+        const style = document.createElement("style");
+        style.id = "finora-ui-styles";
+
+        style.textContent = [
+          "#finora-ui-host{font-family:inherit}",
+          ".finora-loading-overlay{position:fixed;inset:0;z-index:99999;background:rgba(8,15,30,.52);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}",
+          ".finora-loading-card{min-width:220px;max-width:90vw;background:#fff;color:#172033;border-radius:18px;padding:24px;text-align:center;box-shadow:0 20px 80px rgba(0,0,0,.24)}",
+          ".finora-spinner{width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#1d4ed8;border-radius:50%;animation:finora-spin .8s linear infinite;margin:0 auto 14px}",
+          "@keyframes finora-spin{to{transform:rotate(360deg)}}",
+          ".finora-toast-host{position:fixed;z-index:100000;right:16px;top:16px;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 32px))}",
+          ".finora-toast{padding:13px 16px;border-radius:12px;background:#172033;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.18);font-size:14px;line-height:1.5}",
+          ".finora-toast.success{background:#166534}.finora-toast.error{background:#991b1b}.finora-toast.warning{background:#92400e}",
+          ".finora-dialog-backdrop{position:fixed;inset:0;z-index:100001;background:rgba(8,15,30,.55);display:flex;align-items:center;justify-content:center;padding:18px}",
+          ".finora-dialog{width:min(560px,100%);max-height:90vh;overflow:auto;background:#fff;color:#172033;border-radius:18px;padding:22px;box-shadow:0 20px 80px rgba(0,0,0,.25)}",
+          ".finora-dialog h2{font-size:20px;margin:0 0 12px}.finora-dialog-content{line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}",
+          ".finora-dialog-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}.finora-dialog button{border:0;border-radius:10px;padding:10px 16px;cursor:pointer;font:inherit}.finora-dialog .primary{background:#1d4ed8;color:#fff}.finora-dialog .secondary{background:#e5e7eb;color:#172033}"
+        ].join("\n");
+
+        document.head.appendChild(style);
+      }
+
+      let toastHost = document.getElementById("finora-toast-host");
+
+      if (!toastHost) {
+        toastHost = document.createElement("div");
+        toastHost.id = "finora-toast-host";
+        toastHost.className = "finora-toast-host";
+        host.appendChild(toastHost);
+      }
+
+      this.toastHost = toastHost;
     },
 
-    async login(identifier, password, rememberMe) {
-      const accountIdentifier =
-        normalizeString(identifier);
+    showLoading(title, detail) {
+      this.ensure();
+      STATE.loadingCount += 1;
 
-      const accountPassword =
-        String(password || "");
+      if (this.loadingElement) {
+        const t = this.loadingElement.querySelector(
+          "[data-finora-loading-title]"
+        );
+        const d = this.loadingElement.querySelector(
+          "[data-finora-loading-detail]"
+        );
 
-      if (!accountIdentifier) {
-        throw new FinoraError(
-          "LOGIN_IDENTIFIER_REQUIRED",
-          "กรุณากรอกชื่อผู้ใช้หรืออีเมล"
+        if (t) t.textContent = title || "กำลังโหลดข้อมูล";
+        if (d) d.textContent = detail || "กรุณารอสักครู่";
+
+        return;
+      }
+
+      const overlay = document.createElement("div");
+      overlay.className = "finora-loading-overlay";
+      overlay.setAttribute("role", "status");
+      overlay.setAttribute("aria-live", "polite");
+
+      overlay.innerHTML =
+        '<div class="finora-loading-card">' +
+          '<div class="finora-spinner" aria-hidden="true"></div>' +
+          '<div data-finora-loading-title></div>' +
+          '<div data-finora-loading-detail style="font-size:13px;color:#64748b;margin-top:6px"></div>' +
+        "</div>";
+
+      overlay.querySelector(
+        "[data-finora-loading-title]"
+      ).textContent = title || "กำลังโหลดข้อมูล";
+
+      overlay.querySelector(
+        "[data-finora-loading-detail]"
+      ).textContent = detail || "กรุณารอสักครู่";
+
+      this.host.appendChild(overlay);
+      this.loadingElement = overlay;
+    },
+
+    hideLoading() {
+      STATE.loadingCount = Math.max(0, STATE.loadingCount - 1);
+
+      if (STATE.loadingCount > 0) {
+        return;
+      }
+
+      if (
+        this.loadingElement &&
+        this.loadingElement.parentNode
+      ) {
+        this.loadingElement.parentNode.removeChild(
+          this.loadingElement
         );
       }
 
-      if (!accountPassword) {
+      this.loadingElement = null;
+    },
+
+    toast(message, type, duration) {
+      this.ensure();
+
+      const item = document.createElement("div");
+
+      item.className =
+        "finora-toast " +
+        (["success", "error", "warning"].includes(type) ? type : "");
+
+      item.setAttribute(
+        "role",
+        type === "error" ? "alert" : "status"
+      );
+
+      item.textContent = text(message) || "ดำเนินการเรียบร้อย";
+      this.toastHost.appendChild(item);
+
+      window.setTimeout(function () {
+        if (item.parentNode) {
+          item.parentNode.removeChild(item);
+        }
+      }, Number(duration) || 4000);
+
+      return item;
+    },
+
+    dialog(options) {
+      this.ensure();
+      const opts = options || {};
+
+      return new Promise(function (resolve) {
+        const backdrop = document.createElement("div");
+        backdrop.className = "finora-dialog-backdrop";
+
+        const dialog = document.createElement("section");
+        dialog.className = "finora-dialog";
+        dialog.setAttribute("role", "dialog");
+        dialog.setAttribute("aria-modal", "true");
+
+        const titleEl = document.createElement("h2");
+        titleEl.textContent = text(opts.title) || "แจ้งเตือน";
+
+        const content = document.createElement("div");
+        content.className = "finora-dialog-content";
+        content.textContent = text(opts.message || opts.content);
+
+        const actions = document.createElement("div");
+        actions.className = "finora-dialog-actions";
+
+        const cancel = document.createElement("button");
+        cancel.className = "secondary";
+        cancel.type = "button";
+        cancel.textContent = text(opts.cancelText) || "ยกเลิก";
+
+        const confirm = document.createElement("button");
+        confirm.className = "primary";
+        confirm.type = "button";
+        confirm.textContent = text(opts.confirmText) || "ตกลง";
+
+        function close(value) {
+          if (backdrop.parentNode) {
+            backdrop.parentNode.removeChild(backdrop);
+          }
+
+          document.removeEventListener("keydown", onKey);
+          resolve(value);
+        }
+
+        function onKey(event) {
+          if (
+            event.key === "Escape" &&
+            opts.dismissible !== false
+          ) {
+            close(false);
+          }
+        }
+
+        cancel.addEventListener("click", function () {
+          close(false);
+        });
+
+        confirm.addEventListener("click", function () {
+          close(true);
+        });
+
+        backdrop.addEventListener("click", function (event) {
+          if (
+            event.target === backdrop &&
+            opts.dismissible !== false
+          ) {
+            close(false);
+          }
+        });
+
+        actions.appendChild(cancel);
+        actions.appendChild(confirm);
+        dialog.appendChild(titleEl);
+        dialog.appendChild(content);
+        dialog.appendChild(actions);
+        backdrop.appendChild(dialog);
+        this.host.appendChild(backdrop);
+
+        document.addEventListener("keydown", onKey);
+        confirm.focus();
+      }.bind(this));
+    },
+
+    confirm(message, title) {
+      return this.dialog({
+        title: title || "ยืนยันรายการ",
+        message: message,
+        confirmText: "ยืนยัน",
+        cancelText: "ยกเลิก"
+      });
+    },
+
+    async showDocumentModal(options) {
+      this.ensure();
+      const opts = options || {};
+
+      return new Promise(function (resolve) {
+        const backdrop = document.createElement("div");
+        backdrop.className = "finora-dialog-backdrop";
+
+        const dialog = document.createElement("section");
+        dialog.className = "finora-dialog";
+        dialog.style.display = "flex";
+        dialog.style.flexDirection = "column";
+        dialog.style.maxHeight = "90vh";
+
+        const heading = document.createElement("h2");
+        heading.textContent = text(opts.title) || "เอกสาร";
+
+        const warning = document.createElement("p");
+        warning.textContent = text(opts.warningText);
+        warning.style.color = "#92400e";
+
+        const content = document.createElement("div");
+        content.className = "finora-dialog-content";
+        content.style.overflow = "auto";
+        content.style.border = "1px solid #e5e7eb";
+        content.style.borderRadius = "10px";
+        content.style.padding = "12px";
+        content.style.minHeight = "160px";
+        content.style.whiteSpace = "pre-wrap";
+        content.textContent = String(opts.content || "");
+
+        const actions = document.createElement("div");
+        actions.className = "finora-dialog-actions";
+
+        const cancel = document.createElement("button");
+        cancel.className = "secondary";
+        cancel.textContent = text(opts.cancelText) || "ยกเลิก";
+        cancel.type = "button";
+
+        const agree = document.createElement("button");
+        agree.className = "primary";
+        agree.textContent = text(opts.agreeText) || "ยินยอม";
+        agree.type = "button";
+        agree.disabled = opts.requireScrollToBottom === true;
+        agree.style.opacity = agree.disabled ? "0.5" : "1";
+
+        let reachedBottom = opts.requireScrollToBottom !== true;
+
+        function close(value) {
+          if (backdrop.parentNode) {
+            backdrop.parentNode.removeChild(backdrop);
+          }
+
+          document.removeEventListener("keydown", onKey);
+          resolve(value);
+        }
+
+        function onKey(event) {
+          if (event.key === "Escape") {
+            close(false);
+          }
+        }
+
+        content.addEventListener("scroll", function () {
+          if (
+            content.scrollTop + content.clientHeight >=
+            content.scrollHeight - 8
+          ) {
+            reachedBottom = true;
+            agree.disabled = false;
+            agree.style.opacity = "1";
+            warning.textContent =
+              "อ่านเอกสารครบแล้ว คุณสามารถกดยินยอมได้";
+          }
+        });
+
+        cancel.addEventListener("click", function () {
+          close(false);
+        });
+
+        agree.addEventListener("click", function () {
+          if (reachedBottom) {
+            close(true);
+          }
+        });
+
+        actions.appendChild(cancel);
+        actions.appendChild(agree);
+        dialog.appendChild(heading);
+
+        if (warning.textContent) {
+          dialog.appendChild(warning);
+        }
+
+        dialog.appendChild(content);
+        dialog.appendChild(actions);
+        backdrop.appendChild(dialog);
+        this.host.appendChild(backdrop);
+
+        document.addEventListener("keydown", onKey);
+      }.bind(this));
+    }
+  };
+
+  const auth = {
+    async register(data) {
+      const registration = validateRegistration(data);
+
+      const result = await actionCall(
+        "register",
+        registration,
+        {
+          loading: true,
+          loadingMessage: "กำลังสร้างบัญชี FINORA"
+        }
+      );
+
+      if (registration.email) {
+        storageSet(
+          "sessionStorage",
+          CONFIG.PENDING_EMAIL_KEY,
+          registration.email
+        );
+      }
+
+      emit("finora:registration-complete", result);
+      return result;
+    },
+
+    async requestEmailVerification(email) {
+      const normalized = validateEmail(email);
+
+      const result = await actionCall(
+        "requestEmailVerification",
+        { email: normalized },
+        {
+          loading: true,
+          loadingMessage: "กำลังส่งลิงก์ยืนยันอีเมล"
+        }
+      );
+
+      emit("finora:email-verification-requested", {
+        email: normalized,
+        result: result
+      });
+
+      return result;
+    },
+
+    async verifyEmail(token, email) {
+      const verificationToken = text(token);
+
+      if (!verificationToken) {
+        throw new FinoraError(
+          "VERIFICATION_TOKEN_REQUIRED",
+          "ไม่พบรหัสยืนยันอีเมล"
+        );
+      }
+
+      return actionCall(
+        "verifyEmail",
+        {
+          token: verificationToken,
+          email:
+            text(email) ||
+            storageGet("sessionStorage", CONFIG.PENDING_EMAIL_KEY) ||
+            ""
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังยืนยันอีเมล"
+        }
+      );
+    },
+
+    async login(identifier, password, rememberMe) {
+      if (!text(identifier)) {
+        throw new FinoraError(
+          "LOGIN_IDENTIFIER_REQUIRED",
+          "กรุณากรอกอีเมลหรือชื่อผู้ใช้"
+        );
+      }
+
+      if (!String(password || "")) {
         throw new FinoraError(
           "LOGIN_PASSWORD_REQUIRED",
           "กรุณากรอกรหัสผ่าน"
         );
       }
 
-      const remember = rememberMe === true;
-
-      const result = await callApi(
+      const result = await actionCall(
         "login",
         {
-          identifier: accountIdentifier,
-          password: accountPassword,
-          rememberMe: remember
+          identifier: text(identifier),
+          email: normalizedEmail(identifier),
+          password: String(password),
+          rememberMe: rememberMe === true
         },
         {
           loading: true,
-          loadingMessage:
-            "กำลังเข้าสู่ระบบ FINORA",
-          loadingDetail:
-            "กำลังตรวจสอบข้อมูลบัญชี"
+          loadingMessage: "กำลังเข้าสู่ระบบ FINORA"
         }
       );
 
-      if (
-        !result ||
-        !result.sessionToken
-      ) {
+      const data = setAuthenticatedResult(
+        result,
+        rememberMe === true
+      );
+
+      if (data.user) {
+        STATE.user = data.user;
+      }
+
+      emit("finora:login-complete", {
+        user: STATE.user,
+        result: data
+      });
+
+      return data;
+    },
+
+    async googleLogin(idToken, rememberMe) {
+      const token = text(idToken);
+
+      if (!token) {
         throw new FinoraError(
-          "SESSION_TOKEN_MISSING",
-          "เข้าสู่ระบบไม่สำเร็จ เนื่องจากไม่ได้รับ Session Token"
+          "GOOGLE_ID_TOKEN_REQUIRED",
+          "ไม่พบข้อมูลยืนยันตัวตนจาก Google"
         );
       }
 
-      session.set(
-        result.sessionToken,
-        remember,
-        result.expiresAt
-      );
-
-      APP_STATE.user = result.user || null;
-
-      /*
-       * Code.gs may return the base USER role in login response.
-       * Ask the backend for the effective role after storing the
-       * valid session. The backend remains the authority for access.
-       */
-      try {
-        const currentUser = await callAuthenticatedApi(
-          "getCurrentUser",
-          {},
-          {
-            loading: false,
-            timeout: 30000
-          }
-        );
-
-        if (currentUser) {
-          APP_STATE.user = currentUser;
-        }
-      } catch (error) {
-        /*
-         * Do not invent a user or role.
-         * Retain only the actual user object returned by login.
-         * Authorization is still checked by Code.gs on every action.
-         */
-        console.warn(
-          "[FINORA] Could not refresh the current user after login:",
-          error.code || error.message
-        );
-      }
-
-      dispatchEvent(
-        "finora:login-complete",
+      const result = await actionCall(
+        "googleLogin",
         {
-          user: APP_STATE.user,
-          rememberMe: remember
+          idToken: token,
+          credential: token,
+          rememberMe: rememberMe === true
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังเข้าสู่ระบบด้วย Google"
         }
       );
 
-      return {
-        user: APP_STATE.user,
-        expiresAt: result.expiresAt,
-        rememberMe: remember
-      };
+      const data = setAuthenticatedResult(
+        result,
+        rememberMe === true
+      );
+
+      if (data.user) {
+        STATE.user = data.user;
+      }
+
+      emit("finora:login-complete", {
+        provider: "google",
+        user: STATE.user,
+        result: data
+      });
+
+      return data;
+    },
+
+    async requestPasswordReset(email) {
+      const normalized = validateEmail(email);
+
+      return actionCall(
+        "requestPasswordReset",
+        { email: normalized },
+        {
+          loading: true,
+          loadingMessage: "กำลังส่งคำขอรีเซ็ตรหัสผ่าน"
+        }
+      );
+    },
+
+    async resetPassword(token, newPassword) {
+      const resetToken = text(token);
+
+      if (!resetToken) {
+        throw new FinoraError(
+          "RESET_TOKEN_REQUIRED",
+          "ไม่พบรหัสรีเซ็ตรหัสผ่าน"
+        );
+      }
+
+      const password = validatePassword(newPassword);
+
+      return actionCall(
+        "resetPassword",
+        {
+          token: resetToken,
+          resetToken: resetToken,
+          newPassword: password,
+          password: password
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังเปลี่ยนรหัสผ่าน"
+        }
+      );
+    },
+
+    async changePassword(currentPassword, newPassword) {
+      if (!String(currentPassword || "")) {
+        throw new FinoraError(
+          "CURRENT_PASSWORD_REQUIRED",
+          "กรุณากรอกรหัสผ่านปัจจุบัน"
+        );
+      }
+
+      const password = validatePassword(newPassword);
+
+      return authCall(
+        "changePassword",
+        {
+          currentPassword: String(currentPassword),
+          newPassword: password
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังเปลี่ยนรหัสผ่าน"
+        }
+      );
+    },
+
+    async getCurrentUser(options) {
+      const data = await authCall(
+        "currentUser",
+        {},
+        Object.assign({ loading: false }, options || {})
+      );
+
+      const user = data && (data.user || data.profile || data);
+
+      STATE.user = user || null;
+      STATE.isAuthenticated = true;
+
+      emit("finora:user-loaded", { user: STATE.user });
+
+      return STATE.user;
     },
 
     async logout() {
       let result = null;
 
       try {
-        if (session.hasSession()) {
-          result = await callAuthenticatedApi(
+        if (session.getToken()) {
+          result = await authCall(
             "logout",
             {},
             {
               loading: true,
-              loadingMessage:
-                "กำลังออกจากระบบ"
+              loadingMessage: "กำลังออกจากระบบ"
             }
           );
         }
@@ -2321,1697 +1427,14 @@
         session.clear();
       }
 
-      dispatchEvent(
-        "finora:logout-complete",
-        result
-      );
-
+      emit("finora:logout-complete", {});
       return result;
-    },
-
-    async getCurrentUser(options) {
-      const result = await callAuthenticatedApi(
-        "getCurrentUser",
-        {},
-        Object.assign(
-          {
-            loading: false
-          },
-          options || {}
-        )
-      );
-
-      APP_STATE.user = result || null;
-      APP_STATE.isAuthenticated = !!result;
-
-      dispatchEvent(
-        "finora:user-loaded",
-        result
-      );
-
-      return result;
-    },
-
-    async requestPasswordReset(email) {
-      const normalizedEmail = assertValidEmail(email);
-
-      return callApi(
-        "requestPasswordReset",
-        {
-          email: normalizedEmail
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังส่งลิงก์รีเซ็ตรหัสผ่าน",
-          loadingDetail:
-            normalizedEmail
-        }
-      );
-    },
-
-    getPendingPasswordResetToken() {
-      return APP_STATE.pendingResetToken || "";
-    },
-
-    async resetPassword(token, newPassword) {
-      const resetToken = normalizeString(
-        token ||
-        APP_STATE.pendingResetToken
-      );
-
-      if (!resetToken) {
-        throw new FinoraError(
-          "RESET_TOKEN_REQUIRED",
-          "ไม่พบลิงก์รีเซ็ตรหัสผ่าน กรุณาเปิดลิงก์จากอีเมลอีกครั้ง"
-        );
-      }
-
-      const password = assertValidPassword(
-        newPassword
-      );
-
-      const result = await callApi(
-        "resetPassword",
-        {
-          token: resetToken,
-          newPassword: password
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังเปลี่ยนรหัสผ่าน"
-        }
-      );
-
-      APP_STATE.pendingResetToken = "";
-
-      dispatchEvent(
-        "finora:password-reset-complete",
-        result
-      );
-
-      return result;
-    },
-
-    async changePassword(
-      currentPassword,
-      newPassword
-    ) {
-      const current = String(
-        currentPassword || ""
-      );
-
-      if (!current) {
-        throw new FinoraError(
-          "CURRENT_PASSWORD_REQUIRED",
-          "กรุณากรอกรหัสผ่านปัจจุบัน"
-        );
-      }
-
-      const next = assertValidPassword(
-        newPassword
-      );
-
-      return callAuthenticatedApi(
-        "changePassword",
-        {
-          currentPassword: current,
-          newPassword: next
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังเปลี่ยนรหัสผ่าน"
-        }
-      );
-    },
-
-    async updateProfile(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_PROFILE_DATA",
-          "ข้อมูลโปรไฟล์ไม่ถูกต้อง"
-        );
-      }
-
-      const payload = Object.assign(
-        {},
-        data
-      );
-
-      if (payload.phone !== undefined) {
-        payload.phone = assertValidPhone(
-          payload.phone
-        );
-      }
-
-      if (payload.title !== undefined) {
-        if (!VALID_TITLES.includes(payload.title)) {
-          throw new FinoraError(
-            "INVALID_TITLE",
-            "กรุณาเลือกคำนำหน้าให้ถูกต้อง"
-          );
-        }
-      }
-
-      if (payload.fullName !== undefined) {
-        payload.fullName = normalizeString(
-          payload.fullName
-        );
-
-        if (
-          payload.fullName.length < 2 ||
-          payload.fullName.length > 150
-        ) {
-          throw new FinoraError(
-            "INVALID_FULL_NAME",
-            "ชื่อ-นามสกุลไม่ถูกต้อง"
-          );
-        }
-      }
-
-      const result = await callAuthenticatedApi(
-        "updateProfile",
-        payload,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกข้อมูลโปรไฟล์"
-        }
-      );
-
-      APP_STATE.user = result || APP_STATE.user;
-
-      dispatchEvent(
-        "finora:profile-updated",
-        result
-      );
-
-      return result;
-    },
-
-    hasSession() {
-      return session.hasSession();
-    },
-
-    getSessionToken() {
-      return session.getToken();
-    },
-
-    getUser() {
-      return APP_STATE.user;
-    },
-
-    getState() {
-      return {
-        isAuthenticated: APP_STATE.isAuthenticated,
-        user: APP_STATE.user,
-        sessionExpiry: APP_STATE.sessionExpiry,
-        rememberMe: APP_STATE.rememberMe
-      };
-    }
-  };
-
-  /* ================================================================
-   * 8. LINE LOGIN
-   * ================================================================ */
-
-  function getPendingLineSignupCode() {
-    if (APP_STATE.pendingLineSignupCode) {
-      return APP_STATE.pendingLineSignupCode;
-    }
-
-    const storedCode = safeStorageGet(
-      "sessionStorage",
-      CONFIG.PENDING_LINE_SIGNUP_KEY
-    );
-
-    const expiry = Number(
-      safeStorageGet(
-        "sessionStorage",
-        CONFIG.PENDING_LINE_SIGNUP_EXPIRY_KEY
-      ) || 0
-    );
-
-    if (
-      !storedCode ||
-      !expiry ||
-      expiry <= Date.now()
-    ) {
-      clearPendingLineSignupCode();
-      return "";
-    }
-
-    APP_STATE.pendingLineSignupCode = storedCode;
-
-    return storedCode;
-  }
-
-  function setPendingLineSignupCode(code) {
-    const value = normalizeString(code);
-
-    if (!value) {
-      clearPendingLineSignupCode();
-      return;
-    }
-
-    APP_STATE.pendingLineSignupCode = value;
-
-    safeStorageSet(
-      "sessionStorage",
-      CONFIG.PENDING_LINE_SIGNUP_KEY,
-      value
-    );
-
-    safeStorageSet(
-      "sessionStorage",
-      CONFIG.PENDING_LINE_SIGNUP_EXPIRY_KEY,
-      String(Date.now() + 120000)
-    );
-  }
-
-  function clearPendingLineSignupCode() {
-    APP_STATE.pendingLineSignupCode = "";
-
-    safeStorageRemove(
-      "sessionStorage",
-      CONFIG.PENDING_LINE_SIGNUP_KEY
-    );
-
-    safeStorageRemove(
-      "sessionStorage",
-      CONFIG.PENDING_LINE_SIGNUP_EXPIRY_KEY
-    );
-  }
-
-  const line = {
-    async start(mode, options) {
-      const settings = Object.assign(
-        {
-          redirect: true,
-          rememberMe: false
-        },
-        options || {}
-      );
-
-      const lineMode = mode || "login";
-
-      let result;
-
-      if (lineMode === "link") {
-        result = await callAuthenticatedApi(
-          "startLineLogin",
-          {
-            mode: "link"
-          },
-          {
-            loading: true,
-            loadingMessage:
-              "กำลังเตรียมเชื่อมต่อ LINE"
-          }
-        );
-      } else {
-        result = await callApi(
-          "startLineLogin",
-          {
-            mode: "login"
-          },
-          {
-            loading: true,
-            loadingMessage:
-              "กำลังเชื่อมต่อ LINE"
-          }
-        );
-      }
-
-      if (
-        !result ||
-        !result.authorizationUrl
-      ) {
-        throw new FinoraError(
-          "LINE_AUTH_URL_MISSING",
-          "ระบบไม่ได้รับ URL สำหรับเข้าสู่ระบบด้วย LINE"
-        );
-      }
-
-      if (settings.redirect) {
-        window.location.assign(
-          result.authorizationUrl
-        );
-      }
-
-      return result;
-    },
-
-    async exchangeCode(lineCode, rememberMe) {
-      const code = normalizeString(lineCode);
-
-      if (!code) {
-        throw new FinoraError(
-          "LINE_CODE_REQUIRED",
-          "ไม่พบรหัสเข้าสู่ระบบจาก LINE"
-        );
-      }
-
-      const result = await callApi(
-        "exchangeLineCode",
-        {
-          lineCode: code,
-          rememberMe: rememberMe === true
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังเข้าสู่ระบบด้วย LINE"
-        }
-      );
-
-      if (!result || !result.sessionToken) {
-        throw new FinoraError(
-          "LINE_SESSION_MISSING",
-          "ไม่ได้รับเซสชันจากการเข้าสู่ระบบด้วย LINE"
-        );
-      }
-
-      session.set(
-        result.sessionToken,
-        rememberMe === true,
-        result.expiresAt
-      );
-
-      APP_STATE.user = result.user || null;
-
-      dispatchEvent(
-        "finora:line-login-complete",
-        {
-          user: APP_STATE.user,
-          expiresAt: result.expiresAt
-        }
-      );
-
-      return result;
-    },
-
-    async unlink(password) {
-      if (!normalizeString(password)) {
-        throw new FinoraError(
-          "PASSWORD_REQUIRED",
-          "กรุณากรอกรหัสผ่านเพื่อยกเลิกการเชื่อมต่อ LINE"
-        );
-      }
-
-      const result = await callAuthenticatedApi(
-        "unlinkLineAccount",
-        {
-          password: String(password)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังยกเลิกการเชื่อมต่อ LINE"
-        }
-      );
-
-      dispatchEvent(
-        "finora:line-unlinked",
-        result
-      );
-
-      return result;
-    },
-
-    async handleRedirect(options) {
-      const settings = Object.assign(
-        {
-          rememberMe: false
-        },
-        options || {}
-      );
-
-      const url = new URL(window.location.href);
-      const params = url.searchParams;
-
-      const lineCode = params.get("lineCode");
-      const lineSignupCode = params.get(
-        "lineSignupCode"
-      );
-
-      const linked = params.get("lineLinked");
-
-      if (
-        !lineCode &&
-        !lineSignupCode &&
-        linked !== "1"
-      ) {
-        return null;
-      }
-
-      /*
-       * Remove temporary OAuth codes from the visible URL.
-       * The short-lived sign-up code is held only in memory
-       * and sessionStorage until registration is completed.
-       */
-      params.delete("lineCode");
-      params.delete("lineSignupCode");
-      params.delete("lineLinked");
-
-      window.history.replaceState(
-        {},
-        document.title,
-        url.pathname +
-        (params.toString()
-          ? "?" + params.toString()
-          : "") +
-        url.hash
-      );
-
-      if (lineCode) {
-        return this.exchangeCode(
-          lineCode,
-          settings.rememberMe
-        );
-      }
-
-      if (lineSignupCode) {
-        setPendingLineSignupCode(
-          lineSignupCode
-        );
-
-        const result = {
-          mode: "signup",
-          lineSignupCode: lineSignupCode
-        };
-
-        dispatchEvent(
-          "finora:line-signup-code-received",
-          result
-        );
-
-        return result;
-      }
-
-      if (linked === "1") {
-        const result = {
-          mode: "linked",
-          success: true
-        };
-
-        dispatchEvent(
-          "finora:line-account-linked",
-          result
-        );
-
-        return result;
-      }
-
-      return null;
-    },
-
-    getPendingSignupCode() {
-      return getPendingLineSignupCode();
-    }
-  };
-
-  /* ================================================================
-   * 9. PUBLIC CONFIGURATION AND PUBLIC ANNOUNCEMENTS
-   * ================================================================ */
-
-  const publicApi = {
-    async ping() {
-      return callApi(
-        "ping",
-        {},
-        {
-          loading: false
-        }
-      );
-    },
-
-    async getConfig() {
-      const result = await callApi(
-        "getPublicConfig",
-        {},
-        {
-          loading: false
-        }
-      );
-
-      APP_STATE.publicConfig = result || null;
-
-      dispatchEvent(
-        "finora:public-config-loaded",
-        result
-      );
-
-      return result;
-    },
-
-    async getAnnouncements(placement) {
-      const target = String(
-        placement || "LOGIN"
-      ).toUpperCase();
-
-      if (
-        !ANNOUNCEMENT_PLACEMENTS.includes(target)
-      ) {
-        throw new FinoraError(
-          "INVALID_ANNOUNCEMENT_PLACEMENT",
-          "ตำแหน่งแสดงประกาศไม่ถูกต้อง"
-        );
-      }
-
-      return callApi(
-        "getPublicAnnouncements",
-        {
-          placement: target
-        },
-        {
-          loading: false
-        }
-      );
-    },
-
-    async getLoanProducts() {
-      return callApi(
-        "getPublicLoanProducts",
-        {},
-        {
-          loading: false
-        }
-      );
-    }
-  };
-
-  /* ================================================================
-   * 10. BORROWER DASHBOARD
-   * ================================================================ */
-
-  const dashboard = {
-    async getData() {
-      const result = await callAuthenticatedApi(
-        "getDashboardData",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดข้อมูลระบบ"
-        }
-      );
-
-      dispatchEvent(
-        "finora:dashboard-loaded",
-        result
-      );
-
-      return result;
-    }
-  };
-
-  /* ================================================================
-   * 11. LOAN APPLICATIONS AND ACCOUNTS
-   * ================================================================ */
-
-  const loans = {
-    async getMyApplications() {
-      return callAuthenticatedApi(
-        "getMyLoanApplications",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดคำขอสินเชื่อ"
-        }
-      );
-    },
-
-    async submitApplication(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_APPLICATION_DATA",
-          "ข้อมูลคำขอสินเชื่อไม่ถูกต้อง"
-        );
-      }
-
-      const payload = Object.assign(
-        {},
-        data
-      );
-
-      payload.productId = normalizeString(
-        payload.productId
-      );
-
-      if (!payload.productId) {
-        throw new FinoraError(
-          "PRODUCT_REQUIRED",
-          "กรุณาเลือกผลิตภัณฑ์สินเชื่อ"
-        );
-      }
-
-      payload.amountRequested = Number(
-        payload.amountRequested
-      );
-
-      payload.termMonths = Number(
-        payload.termMonths
-      );
-
-      payload.monthlyIncome = Number(
-        payload.monthlyIncome
-      );
-
-      payload.monthlyExpenses = Number(
-        payload.monthlyExpenses
-      );
-
-      if (
-        !Number.isFinite(payload.amountRequested) ||
-        payload.amountRequested <= 0
-      ) {
-        throw new FinoraError(
-          "INVALID_LOAN_AMOUNT",
-          "จำนวนเงินที่ขอสินเชื่อไม่ถูกต้อง"
-        );
-      }
-
-      if (
-        !Number.isInteger(payload.termMonths) ||
-        payload.termMonths <= 0
-      ) {
-        throw new FinoraError(
-          "INVALID_LOAN_TERM",
-          "ระยะเวลาชำระสินเชื่อไม่ถูกต้อง"
-        );
-      }
-
-      if (
-        !Number.isFinite(payload.monthlyIncome) ||
-        payload.monthlyIncome < 0
-      ) {
-        throw new FinoraError(
-          "INVALID_MONTHLY_INCOME",
-          "รายได้ต่อเดือนไม่ถูกต้อง"
-        );
-      }
-
-      if (
-        !Number.isFinite(payload.monthlyExpenses) ||
-        payload.monthlyExpenses < 0
-      ) {
-        throw new FinoraError(
-          "INVALID_MONTHLY_EXPENSES",
-          "รายจ่ายต่อเดือนไม่ถูกต้อง"
-        );
-      }
-
-      if (
-        !normalizeString(payload.purpose)
-      ) {
-        throw new FinoraError(
-          "LOAN_PURPOSE_REQUIRED",
-          "กรุณาระบุวัตถุประสงค์การกู้"
-        );
-      }
-
-      const result = await callAuthenticatedApi(
-        "submitLoanApplication",
-        payload,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังส่งคำขอสินเชื่อ",
-          loadingDetail:
-            "กำลังบันทึกข้อมูลคำขอกับระบบ FINORA"
-        }
-      );
-
-      dispatchEvent(
-        "finora:loan-application-submitted",
-        result
-      );
-
-      return result;
-    },
-
-    async getMyAccounts() {
-      return callAuthenticatedApi(
-        "getMyLoanAccounts",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดบัญชีสินเชื่อ"
-        }
-      );
-    },
-
-    async getRepaymentSchedule(loanAccountId) {
-      return callAuthenticatedApi(
-        "getMyRepaymentSchedule",
-        {
-          loanAccountId:
-            normalizeString(loanAccountId)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดตารางชำระเงิน"
-        }
-      );
-    },
-
-    async getTransactions(page, pageSize) {
-      return callAuthenticatedApi(
-        "getMyTransactions",
-        {
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดประวัติธุรกรรม"
-        }
-      );
-    }
-  };
-
-  /* ================================================================
-   * 12. NOTIFICATIONS
-   * ================================================================ */
-
-  const notifications = {
-    async list(page, pageSize) {
-      return callAuthenticatedApi(
-        "getMyNotifications",
-        {
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดการแจ้งเตือน"
-        }
-      );
-    },
-
-    async markRead(notificationId) {
-      const id = normalizeString(
-        notificationId
-      );
-
-      if (!id) {
-        throw new FinoraError(
-          "NOTIFICATION_ID_REQUIRED",
-          "ไม่พบรหัสการแจ้งเตือน"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "markNotificationRead",
-        {
-          notificationId: id
-        },
-        {
-          loading: false
-        }
-      );
-    }
-  };
-
-  /* ================================================================
-   * 13. PROFILE AND SESSIONS
-   * ================================================================ */
-
-  const profile = {
-    async update(data) {
-      return auth.updateProfile(data);
-    },
-
-    async listSessions() {
-      return callAuthenticatedApi(
-        "getMySessions",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดอุปกรณ์ที่เข้าสู่ระบบ"
-        }
-      );
-    },
-
-    async revokeSession(sessionId) {
-      const id = normalizeString(sessionId);
-
-      if (!id) {
-        throw new FinoraError(
-          "SESSION_ID_REQUIRED",
-          "ไม่พบเซสชันที่ต้องการยกเลิก"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "revokeMySession",
-        {
-          sessionId: id
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังยกเลิกเซสชัน"
-        }
-      );
-    }
-  };
-
-  /* ================================================================
-   * 14. SUPPORT TICKETS
-   * ================================================================ */
-
-  const support = {
-    async createTicket(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_SUPPORT_TICKET",
-          "ข้อมูลคำร้องไม่ถูกต้อง"
-        );
-      }
-
-      const subject = normalizeString(
-        data.subject
-      );
-
-      const message = normalizeString(
-        data.message
-      );
-
-      if (
-        subject.length < 3 ||
-        subject.length > 200
-      ) {
-        throw new FinoraError(
-          "INVALID_SUPPORT_SUBJECT",
-          "หัวข้อคำร้องต้องมี 3–200 ตัวอักษร"
-        );
-      }
-
-      if (
-        message.length < 5 ||
-        message.length > 10000
-      ) {
-        throw new FinoraError(
-          "INVALID_SUPPORT_MESSAGE",
-          "รายละเอียดคำร้องต้องมี 5–10,000 ตัวอักษร"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "createSupportTicket",
-        {
-          subject: subject,
-          category: normalizeString(
-            data.category || "GENERAL"
-          ),
-          message: message
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังส่งคำร้องถึง FINORA"
-        }
-      );
-    },
-
-    async listMyTickets() {
-      return callAuthenticatedApi(
-        "getMySupportTickets",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดคำร้องของคุณ"
-        }
-      );
-    }
-  };
-
-  /* ================================================================
-   * 15. IMAGE UPLOAD THROUGH Code.gs / ImgBB
-   * ================================================================ */
-
-  function readFileAsDataUrl(file) {
-    return new Promise(
-      function (resolve, reject) {
-        if (!(file instanceof Blob)) {
-          reject(
-            new FinoraError(
-              "INVALID_FILE",
-              "ไฟล์ที่เลือกไม่ถูกต้อง"
-            )
-          );
-
-          return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = function () {
-          resolve(String(reader.result || ""));
-        };
-
-        reader.onerror = function () {
-          reject(
-            new FinoraError(
-              "FILE_READ_FAILED",
-              "ไม่สามารถอ่านไฟล์ภาพได้"
-            )
-          );
-        };
-
-        reader.readAsDataURL(file);
-      }
-    );
-  }
-
-  const images = {
-    async upload(file, purpose) {
-      if (!(file instanceof Blob)) {
-        throw new FinoraError(
-          "IMAGE_REQUIRED",
-          "กรุณาเลือกไฟล์ภาพก่อนอัปโหลด"
-        );
-      }
-
-      if (!CONFIG.SUPPORTED_IMAGE_TYPES.includes(file.type)) {
-        throw new FinoraError(
-          "IMAGE_TYPE_NOT_ALLOWED",
-          "รองรับเฉพาะไฟล์ JPG, PNG, WEBP และ GIF"
-        );
-      }
-
-      if (
-        file.size <= 0 ||
-        file.size > CONFIG.MAX_IMAGE_SIZE_BYTES
-      ) {
-        throw new FinoraError(
-          "IMAGE_TOO_LARGE",
-          "ไฟล์ภาพว่างเปล่าหรือมีขนาดเกิน 5 MB"
-        );
-      }
-
-      const dataUrl = await readFileAsDataUrl(file);
-
-      const commaIndex = dataUrl.indexOf(",");
-
-      if (commaIndex < 0) {
-        throw new FinoraError(
-          "INVALID_IMAGE_DATA",
-          "ไม่สามารถแปลงไฟล์ภาพได้"
-        );
-      }
-
-      const base64Data = dataUrl.substring(
-        commaIndex + 1
-      );
-
-      return callAuthenticatedApi(
-        "uploadImage",
-        {
-          purpose: String(
-            purpose || "PROFILE"
-          ).toUpperCase(),
-          base64Data: base64Data,
-          fileName: file.name || "finora-image.jpg"
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังอัปโหลดรูปภาพ",
-          loadingDetail:
-            "กำลังส่งภาพไปยังระบบจัดเก็บรูปภาพ"
-        }
-      );
-    }
-  };
-
-  /* ================================================================
-   * 16. ADMIN API
-   *
-   * All permissions are enforced by Code.gs.
-   * Hiding menu items on the browser is not authorization.
-   * ================================================================ */
-
-  const admin = {
-    async overview() {
-      return callAuthenticatedApi(
-        "adminOverview",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดภาพรวมระบบหลังบ้าน"
-        }
-      );
-    },
-
-    async listUsers(search, page, pageSize) {
-      return callAuthenticatedApi(
-        "adminListUsers",
-        {
-          search: normalizeString(search),
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดข้อมูลสมาชิก"
-        }
-      );
-    },
-
-    async updateUserStatus(userId, status) {
-      return callAuthenticatedApi(
-        "adminUpdateUserStatus",
-        {
-          userId: normalizeString(userId),
-          status: normalizeString(status)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังปรับปรุงสถานะสมาชิก"
-        }
-      );
-    },
-
-    async listLoanProducts() {
-      return callAuthenticatedApi(
-        "adminListLoanProducts",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดผลิตภัณฑ์สินเชื่อ"
-        }
-      );
-    },
-
-    async saveLoanProduct(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_LOAN_PRODUCT",
-          "ข้อมูลผลิตภัณฑ์สินเชื่อไม่ถูกต้อง"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "adminSaveLoanProduct",
-        data,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกผลิตภัณฑ์สินเชื่อ"
-        }
-      );
-    },
-
-    async deleteLoanProduct(productId) {
-      return callAuthenticatedApi(
-        "adminDeleteLoanProduct",
-        {
-          productId: normalizeString(productId)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังปิดการใช้งานผลิตภัณฑ์"
-        }
-      );
-    },
-
-    async listLoanApplications(page, pageSize) {
-      return callAuthenticatedApi(
-        "adminListLoanApplications",
-        {
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดคำขอสินเชื่อ"
-        }
-      );
-    },
-
-    async updateLoanApplication(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_APPLICATION_UPDATE",
-          "ข้อมูลแก้ไขคำขอสินเชื่อไม่ถูกต้อง"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "adminUpdateApplication",
-        data,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกผลการพิจารณา"
-        }
-      );
-    },
-
-    async createLoanAccount(applicationId) {
-      return callAuthenticatedApi(
-        "adminCreateLoanAccount",
-        {
-          applicationId: normalizeString(applicationId)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังสร้างบัญชีสินเชื่อ"
-        }
-      );
-    },
-
-    async confirmDisbursement(
-      loanAccountId,
-      reference
-    ) {
-      return callAuthenticatedApi(
-        "adminConfirmDisbursement",
-        {
-          loanAccountId: normalizeString(loanAccountId),
-          reference: normalizeString(reference)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกการยืนยันจ่ายเงิน"
-        }
-      );
-    },
-
-    async listTransactions(type, page, pageSize) {
-      return callAuthenticatedApi(
-        "adminListTransactions",
-        {
-          type: normalizeString(type),
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดรายการธุรกรรม"
-        }
-      );
-    },
-
-    async recordRepayment(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_REPAYMENT",
-          "ข้อมูลรับชำระไม่ถูกต้อง"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "adminRecordRepayment",
-        data,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกการรับชำระ"
-        }
-      );
-    },
-
-    async listAnnouncements(page, pageSize) {
-      return callAuthenticatedApi(
-        "adminListAnnouncements",
-        {
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดประกาศ"
-        }
-      );
-    },
-
-    async saveAnnouncement(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_ANNOUNCEMENT",
-          "ข้อมูลประกาศไม่ถูกต้อง"
-        );
-      }
-
-      const placements = Array.isArray(data.placements)
-        ? data.placements
-        : [];
-
-      const invalidPlacement = placements.some(
-        function (placement) {
-          return !ANNOUNCEMENT_PLACEMENTS.includes(
-            String(placement).toUpperCase()
-          );
-        }
-      );
-
-      if (invalidPlacement) {
-        throw new FinoraError(
-          "INVALID_ANNOUNCEMENT_PLACEMENT",
-          "มีตำแหน่งแสดงประกาศที่ไม่ถูกต้อง"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "adminSaveAnnouncement",
-        Object.assign(
-          {},
-          data,
-          {
-            placements: placements
-          }
-        ),
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกประกาศ"
-        }
-      );
-    },
-
-    async deleteAnnouncement(announcementId) {
-      return callAuthenticatedApi(
-        "adminDeleteAnnouncement",
-        {
-          announcementId:
-            normalizeString(announcementId)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังปิดประกาศ"
-        }
-      );
-    },
-
-    async listSupportTickets(page, pageSize) {
-      return callAuthenticatedApi(
-        "adminListSupportTickets",
-        {
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดคำร้องของสมาชิก"
-        }
-      );
-    },
-
-    async updateSupportTicket(data) {
-      return callAuthenticatedApi(
-        "adminUpdateSupportTicket",
-        data,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกการแก้ไขคำร้อง"
-        }
-      );
-    },
-
-    async listAuditLogs(page, pageSize) {
-      return callAuthenticatedApi(
-        "adminListAuditLogs",
-        {
-          page: Number(page || 1),
-          pageSize: Number(pageSize || 20)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดบันทึกตรวจสอบย้อนหลัง"
-        }
-      );
-    },
-
-    async listAdmins() {
-      return callAuthenticatedApi(
-        "adminListAdmins",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดผู้ดูแลระบบ"
-        }
-      );
-    },
-
-    async setAdminStatus(email, role, status) {
-      return callAuthenticatedApi(
-        "adminSetAdminStatus",
-        {
-          email: assertValidEmail(email),
-          role: normalizeString(role),
-          status: normalizeString(status)
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังปรับปรุงสิทธิ์ผู้ดูแล"
-        }
-      );
-    },
-
-    async getSettings() {
-      return callAuthenticatedApi(
-        "adminGetSettings",
-        {},
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังโหลดการตั้งค่าระบบ"
-        }
-      );
-    },
-
-    async updateSetting(settingKey, settingValue) {
-      return callAuthenticatedApi(
-        "adminUpdateSettings",
-        {
-          settingKey: normalizeString(settingKey),
-          settingValue: String(
-            settingValue === undefined
-              ? ""
-              : settingValue
-          )
-        },
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังบันทึกการตั้งค่าระบบ"
-        }
-      );
-    },
-
-    async sendNotification(data) {
-      if (!isPlainObject(data)) {
-        throw new FinoraError(
-          "INVALID_NOTIFICATION",
-          "ข้อมูลแจ้งเตือนไม่ถูกต้อง"
-        );
-      }
-
-      return callAuthenticatedApi(
-        "adminSendNotification",
-        data,
-        {
-          loading: true,
-          loadingMessage:
-            "กำลังส่งการแจ้งเตือน"
-        }
-      );
-    }
-  };
-
-  /* ================================================================
-   * 17. CONSENT DOCUMENT HELPERS
-   *
-   * The actual policy text must be provided by index.html.
-   * This helper enforces a scroll-to-bottom step before agreeing.
-   * ================================================================ */
-
-  const consent = {
-    async showTerms(content) {
-      return ui.showDocumentModal({
-        title:
-          "ข้อกำหนดและเงื่อนไขการใช้บริการ FINORA",
-        content: content,
-        agreeText: "ยินยอม",
-        cancelText: "ยกเลิก",
-        warningText:
-          "กรุณาเลื่อนลงด้านล่างสุดและกดยินยอม",
-        requireScrollToBottom: true
-      });
-    },
-
-    async showPrivacyNotice(content) {
-      return ui.showDocumentModal({
-        title:
-          "ประกาศความเป็นส่วนตัว (Privacy Notice)",
-        content: content,
-        agreeText: "ยินยอม",
-        cancelText: "ยกเลิก",
-        warningText:
-          "กรุณาเลื่อนลงด้านล่างสุดและกดยินยอม",
-        requireScrollToBottom: true
-      });
-    }
-  };
-
-  /* ================================================================
-   * 18. PASSWORD RESET AND LINE CALLBACK ROUTING
-   * ================================================================ */
-
-  function readPasswordResetTokenFromUrl() {
-    const url = new URL(window.location.href);
-
-    const view = url.searchParams.get("view");
-    const token = url.searchParams.get("token");
-
-    if (
-      view !== "reset-password" ||
-      !token
-    ) {
-      return "";
-    }
-
-    APP_STATE.pendingResetToken = token;
-
-    /*
-     * Remove the sensitive token from the visible URL and
-     * browser history once captured in memory.
-     */
-    url.searchParams.delete("token");
-
-    window.history.replaceState(
-      {},
-      document.title,
-      url.pathname +
-      (url.searchParams.toString()
-        ? "?" + url.searchParams.toString()
-        : "") +
-      url.hash
-    );
-
-    dispatchEvent(
-      "finora:password-reset-link",
-      {
-        available: true
-      }
-    );
-
-    return token;
-  }
-
-  async function handleOAuthReturnOnStartup() {
-    const url = new URL(window.location.href);
-
-    const hasLineQuery =
-      url.searchParams.has("lineCode") ||
-      url.searchParams.has("lineSignupCode") ||
-      url.searchParams.get("lineLinked") === "1";
-
-    if (!hasLineQuery) {
-      return null;
-    }
-
-    try {
-      const result = await line.handleRedirect();
-
-      dispatchEvent(
-        "finora:oauth-return",
-        result
-      );
-
-      return result;
-
-    } catch (error) {
-      const normalized = normalizeError(error);
-
-      ui.toast(
-        normalized.message,
-        "error"
-      );
-
-      dispatchEvent(
-        "finora:oauth-return-error",
-        {
-          code: normalized.code,
-          message: normalized.message
-        }
-      );
-
-      throw normalized;
-    }
-  }
-
-  /* ================================================================
-   * 19. APPLICATION INITIALIZATION
-   * ================================================================ */
-
-  async function initialize() {
-    if (APP_STATE.initialized) {
-      return;
-    }
-
-    APP_STATE.initialized = true;
-
-    ensureUIHost();
-
-    readPasswordResetTokenFromUrl();
-
-    APP_STATE.rememberMe =
-      session.isRemembered();
-
-    APP_STATE.isAuthenticated =
-      session.hasSession();
-
-    dispatchEvent(
-      "finora:client-ready",
-      {
-        configured: !!normalizeString(CONFIG.API_URL),
-        authenticated: APP_STATE.isAuthenticated,
-        user: APP_STATE.user
-      }
-    );
-
-    /*
-     * The application shell in index.html should listen for:
-     * - finora:client-ready
-     * - finora:oauth-return
-     * - finora:password-reset-link
-     * - finora:login-complete
-     * - finora:registration-complete
-     * - finora:email-verification-requested
-     */
-    try {
-      await handleOAuthReturnOnStartup();
-    } catch (error) {
-      /*
-       * The OAuth handler already notified the interface.
-       * Do not create a fake session.
-       */
-    }
-  }
-
-  /* ================================================================
-   * 20. PUBLIC FINORA API OBJECT
-   * ================================================================ */
-
-  const FINORA = {
-    version: "1.0.0",
-
-    config: {
-      get() {
-        return {
-          appName: CONFIG.APP_NAME,
-          apiUrlConfigured:
-            !!normalizeString(CONFIG.API_URL),
-          maxImageSizeBytes:
-            CONFIG.MAX_IMAGE_SIZE_BYTES,
-          passwordMinLength:
-            CONFIG.PASSWORD_MIN_LENGTH,
-          passwordMaxLength:
-            CONFIG.PASSWORD_MAX_LENGTH
-        };
-      }
-    },
-
-    state: APP_STATE,
-
-    errors: {
-      FinoraError: FinoraError,
-      normalize: normalizeError
-    },
-
-    utils: {
-      normalizeString: normalizeString,
-      normalizeEmail: normalizeEmail,
-      escapeHtml: escapeHtml,
-      formatMoney: formatMoney,
-      formatNumber: formatNumber,
-      formatDate: formatDate,
-      formatDateTime: formatDateTime,
-      isDateValid: isDateValid,
-      calculateAge: calculateAge,
-      assertValidEmail: assertValidEmail,
-      assertValidPhone: assertValidPhone,
-      assertValidCitizenId: assertValidCitizenId,
-      assertValidPassword: assertValidPassword,
-      validateRegistration: validateRegistration
-    },
-
-    ui: ui,
-
-    api: {
-      call: callApi,
-
-      async getPublicConfig() {
-        return publicApi.getConfig();
-      },
-
-      async ping() {
-        return publicApi.ping();
-      }
-    },
-
-    session: session,
-
-    auth: auth,
-
-    line: line,
-
-    public: publicApi,
-
-    dashboard: dashboard,
-
-    loans: loans,
-
-    notifications: notifications,
-
-    profile: profile,
-
-    support: support,
-
-    images: images,
-
-    admin: admin,
-
-    consent: consent,
-
-    async initialize() {
-      return initialize();
     },
 
     async checkSession() {
       if (!session.hasSession()) {
-        APP_STATE.isAuthenticated = false;
-        APP_STATE.user = null;
+        STATE.user = null;
+        STATE.isAuthenticated = false;
 
         return {
           authenticated: false,
@@ -4019,134 +1442,1097 @@
         };
       }
 
-      try {
-        const user = await auth.getCurrentUser({
-          loading: false
-        });
+      const user = await this.getCurrentUser({ loading: false });
 
-        APP_STATE.isAuthenticated = true;
-        APP_STATE.user = user;
-
-        return {
-          authenticated: true,
-          user: user
-        };
-
-      } catch (error) {
-        const normalized = normalizeError(error);
-
-        if (
-          AUTH_ERROR_CODES.includes(
-            normalized.code
-          )
-        ) {
-          session.clear();
-        }
-
-        throw normalized;
-      }
+      return {
+        authenticated: true,
+        user: user
+      };
     }
   };
 
-  /*
-   * Expose only the FINORA namespace.
-   * HTML pages can use window.FINORA after this script loads.
-   */
+  const publicApi = {
+    ping() {
+      return actionCall(
+        "health",
+        {},
+        {
+          loading: false,
+          timeout: 15000
+        }
+      );
+    },
+
+    getConfig() {
+      return actionCall(
+        "publicConfig",
+        {},
+        { loading: false }
+      );
+    },
+
+    getAnnouncements(placement) {
+      return actionCall(
+        "publicAnnouncements",
+        { placement: text(placement || "LOGIN") },
+        { loading: false }
+      );
+    },
+
+    getLoanProducts() {
+      return actionCall(
+        "publicLoanProducts",
+        {},
+        { loading: false }
+      );
+    }
+  };
+
+  const profile = {
+    getCurrent() {
+      return auth.getCurrentUser();
+    },
+
+    update(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_PROFILE",
+          "ข้อมูลโปรไฟล์ไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "updateProfile",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังบันทึกโปรไฟล์"
+        }
+      );
+    },
+
+    changePassword(currentPassword, newPassword) {
+      return auth.changePassword(currentPassword, newPassword);
+    },
+
+    async listSessions() {
+      return authCall(
+        "sessions",
+        {},
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดอุปกรณ์ที่เข้าสู่ระบบ"
+        }
+      );
+    },
+
+    async revokeSession(sessionId) {
+      if (!text(sessionId)) {
+        throw new FinoraError(
+          "SESSION_ID_REQUIRED",
+          "ไม่พบรหัสเซสชัน"
+        );
+      }
+
+      return authCall(
+        "revokeSession",
+        { sessionId: text(sessionId) },
+        {
+          loading: true,
+          loadingMessage: "กำลังออกจากระบบของอุปกรณ์ที่เลือก"
+        }
+      );
+    }
+  };
+
+  const dashboard = {
+    get() {
+      return authCall(
+        "dashboard",
+        {},
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดข้อมูลบัญชี"
+        }
+      );
+    }
+  };
+
+  const loans = {
+    getPublicProducts() {
+      return publicApi.getLoanProducts();
+    },
+
+    listApplications(page, pageSize) {
+      return authCall(
+        "loanApplications",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดคำขอสินเชื่อ"
+        }
+      );
+    },
+
+    submitApplication(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_LOAN_APPLICATION",
+          "ข้อมูลคำขอสินเชื่อไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "submitLoanApplication",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังส่งคำขอสินเชื่อ"
+        }
+      );
+    },
+
+    listAccounts(page, pageSize) {
+      return authCall(
+        "loanAccounts",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดบัญชีสินเชื่อ"
+        }
+      );
+    },
+
+    getRepaymentSchedule(loanAccountId) {
+      return authCall(
+        "repaymentSchedule",
+        { loanAccountId: text(loanAccountId) },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดตารางชำระเงิน"
+        }
+      );
+    },
+
+    getTransactions(type, page, pageSize) {
+      return authCall(
+        "transactions",
+        {
+          type: text(type),
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดประวัติธุรกรรม"
+        }
+      );
+    }
+  };
+
+  const payments = {
+    createPromptPayQR(amount, options) {
+      const numericAmount = Number(amount);
+
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+        throw new FinoraError(
+          "INVALID_PAYMENT_AMOUNT",
+          "จำนวนเงินต้องมากกว่า 0 บาท"
+        );
+      }
+
+      const opts = isObject(options) ? options : {};
+
+      return authCall(
+        "createPromptPayQR",
+        Object.assign({}, opts, { amount: numericAmount }),
+        {
+          loading: true,
+          loadingMessage: "กำลังสร้าง QR พร้อมเพย์"
+        }
+      );
+    },
+
+    verifySlip(fileOrData, options) {
+      const opts = isObject(options) ? options : {};
+      const payload = Object.assign({}, opts);
+
+      if (
+        typeof File !== "undefined" &&
+        fileOrData instanceof File
+      ) {
+        return readFileAsDataUrl(fileOrData).then(function (dataUrl) {
+          const parsed = splitDataUrl(dataUrl);
+
+          payload.base64 = parsed.base64;
+          payload.dataUrl = dataUrl;
+          payload.mimeType = parsed.mimeType;
+          payload.fileName = fileOrData.name;
+
+          return authCall(
+            "verifyPaymentSlip",
+            payload,
+            {
+              loading: true,
+              loadingMessage: "กำลังตรวจสอบสลิป"
+            }
+          );
+        });
+      }
+
+      if (typeof fileOrData === "string") {
+        const parsed = splitDataUrl(fileOrData);
+
+        payload.dataUrl = fileOrData;
+        payload.base64 = parsed.base64 || fileOrData;
+        payload.mimeType = parsed.mimeType || text(opts.mimeType);
+
+      } else if (isObject(fileOrData)) {
+        Object.assign(payload, fileOrData);
+      }
+
+      if (
+        !payload.base64 &&
+        !payload.dataUrl &&
+        !payload.url &&
+        !payload.payload
+      ) {
+        throw new FinoraError(
+          "SLIP_REQUIRED",
+          "กรุณาเลือกไฟล์สลิปหรือระบุข้อมูลสลิป"
+        );
+      }
+
+      return authCall(
+        "verifyPaymentSlip",
+        payload,
+        {
+          loading: true,
+          loadingMessage: "กำลังตรวจสอบสลิป"
+        }
+      );
+    },
+
+    getStatus(paymentId) {
+      if (!text(paymentId)) {
+        throw new FinoraError(
+          "PAYMENT_ID_REQUIRED",
+          "ไม่พบรหัสรายการชำระเงิน"
+        );
+      }
+
+      return authCall(
+        "paymentStatus",
+        { paymentId: text(paymentId) },
+        {
+          loading: true,
+          loadingMessage: "กำลังตรวจสอบสถานะการชำระเงิน"
+        }
+      );
+    },
+
+    getHistory(page, pageSize) {
+      return authCall(
+        "transactions",
+        {
+          type: "PAYMENT",
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดประวัติการชำระเงิน"
+        }
+      );
+    }
+  };
+
+  const notifications = {
+    list(page, pageSize) {
+      return authCall(
+        "notifications",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        { loading: false }
+      );
+    },
+
+    markRead(notificationId) {
+      if (!text(notificationId)) {
+        throw new FinoraError(
+          "NOTIFICATION_ID_REQUIRED",
+          "ไม่พบรหัสการแจ้งเตือน"
+        );
+      }
+
+      return authCall(
+        "markNotificationRead",
+        { notificationId: text(notificationId) },
+        { loading: false }
+      );
+    }
+  };
+
+  const support = {
+    createTicket(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_SUPPORT_TICKET",
+          "ข้อมูลคำร้องไม่ถูกต้อง"
+        );
+      }
+
+      if (!text(data.subject) || !text(data.message)) {
+        throw new FinoraError(
+          "SUPPORT_FIELDS_REQUIRED",
+          "กรุณากรอกหัวข้อและรายละเอียดคำร้อง"
+        );
+      }
+
+      return authCall(
+        "createSupportTicket",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังส่งคำร้องถึงฝ่ายบริการ"
+        }
+      );
+    },
+
+    listTickets(page, pageSize) {
+      return authCall(
+        "supportTickets",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดคำร้องของคุณ"
+        }
+      );
+    }
+  };
+
+  function splitDataUrl(dataUrl) {
+    const match = /^data:([^;,]+);base64,([\s\S]+)$/.exec(
+      String(dataUrl || "")
+    );
+
+    return match
+      ? { mimeType: match[1], base64: match[2] }
+      : { mimeType: "", base64: "" };
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file) {
+        return reject(
+          new FinoraError("FILE_REQUIRED", "กรุณาเลือกไฟล์")
+        );
+      }
+
+      if (
+        file.size >
+        Number(CONFIG.MAX_IMAGE_SIZE_BYTES || 5242880)
+      ) {
+        return reject(
+          new FinoraError(
+            "FILE_TOO_LARGE",
+            "ไฟล์ต้องมีขนาดไม่เกิน " +
+              Math.floor(
+                Number(CONFIG.MAX_IMAGE_SIZE_BYTES || 5242880) /
+                  1048576
+              ) +
+              " MB"
+          )
+        );
+      }
+
+      if (CONFIG.SUPPORTED_IMAGE_TYPES.indexOf(file.type) === -1) {
+        return reject(
+          new FinoraError(
+            "UNSUPPORTED_FILE_TYPE",
+            "รองรับเฉพาะไฟล์ JPG, PNG และ WEBP"
+          )
+        );
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function () {
+        resolve(String(reader.result || ""));
+      };
+
+      reader.onerror = function () {
+        reject(
+          new FinoraError(
+            "FILE_READ_ERROR",
+            "ไม่สามารถอ่านไฟล์ได้"
+          )
+        );
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const images = {
+    readAsDataUrl(file) {
+      return readFileAsDataUrl(file);
+    },
+
+    async upload(file, category) {
+      const dataUrl = await readFileAsDataUrl(file);
+      const parsed = splitDataUrl(dataUrl);
+
+      return authCall(
+        "uploadImage",
+        {
+          base64: parsed.base64,
+          dataUrl: dataUrl,
+          mimeType: parsed.mimeType,
+          fileName: text(file.name),
+          category: text(category)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังอัปโหลดรูปภาพ"
+        }
+      );
+    }
+  };
+
+  const admin = {
+    overview() {
+      return authCall(
+        "adminOverview",
+        {},
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดภาพรวมผู้ดูแลระบบ"
+        }
+      );
+    },
+
+    listUsers(page, pageSize, filters) {
+      return authCall(
+        "adminUsers",
+        Object.assign(
+          {
+            page: Number(page || 1),
+            pageSize: Number(pageSize || 20)
+          },
+          isObject(filters) ? filters : {}
+        ),
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดรายชื่อผู้ใช้"
+        }
+      );
+    },
+
+    updateUserStatus(userId, status, reason) {
+      return authCall(
+        "adminUpdateUserStatus",
+        {
+          userId: text(userId),
+          status: text(status),
+          reason: text(reason)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังอัปเดตสถานะผู้ใช้"
+        }
+      );
+    },
+
+    listLoanProducts(page, pageSize) {
+      return authCall(
+        "adminLoanProducts",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 50)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดผลิตภัณฑ์สินเชื่อ"
+        }
+      );
+    },
+
+    saveLoanProduct(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_LOAN_PRODUCT",
+          "ข้อมูลผลิตภัณฑ์สินเชื่อไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "adminSaveLoanProduct",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังบันทึกผลิตภัณฑ์สินเชื่อ"
+        }
+      );
+    },
+
+    deleteLoanProduct(productId) {
+      return authCall(
+        "adminDeleteLoanProduct",
+        { productId: text(productId) },
+        {
+          loading: true,
+          loadingMessage: "กำลังลบผลิตภัณฑ์สินเชื่อ"
+        }
+      );
+    },
+
+    listLoanApplications(page, pageSize, status) {
+      return authCall(
+        "adminLoanApplications",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20),
+          status: text(status)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดคำขอสินเชื่อ"
+        }
+      );
+    },
+
+    updateLoanApplication(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_APPLICATION_UPDATE",
+          "ข้อมูลแก้ไขคำขอสินเชื่อไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "adminUpdateApplication",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังบันทึกผลการพิจารณา"
+        }
+      );
+    },
+
+    createLoanAccount(applicationId) {
+      return authCall(
+        "adminCreateLoanAccount",
+        { applicationId: text(applicationId) },
+        {
+          loading: true,
+          loadingMessage: "กำลังสร้างบัญชีสินเชื่อ"
+        }
+      );
+    },
+
+    confirmDisbursement(loanAccountId, reference) {
+      return authCall(
+        "adminConfirmDisbursement",
+        {
+          loanAccountId: text(loanAccountId),
+          reference: text(reference)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังยืนยันการจ่ายเงิน"
+        }
+      );
+    },
+
+    listTransactions(type, page, pageSize) {
+      return authCall(
+        "adminTransactions",
+        {
+          type: text(type),
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดรายการธุรกรรม"
+        }
+      );
+    },
+
+    recordRepayment(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_REPAYMENT",
+          "ข้อมูลรับชำระไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "adminRecordRepayment",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังบันทึกการรับชำระ"
+        }
+      );
+    },
+
+    listAnnouncements(page, pageSize) {
+      return authCall(
+        "adminAnnouncements",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดประกาศ"
+        }
+      );
+    },
+
+    saveAnnouncement(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_ANNOUNCEMENT",
+          "ข้อมูลประกาศไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "adminSaveAnnouncement",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังบันทึกประกาศ"
+        }
+      );
+    },
+
+    deleteAnnouncement(announcementId) {
+      return authCall(
+        "adminDeleteAnnouncement",
+        { announcementId: text(announcementId) },
+        {
+          loading: true,
+          loadingMessage: "กำลังลบประกาศ"
+        }
+      );
+    },
+
+    listSupportTickets(page, pageSize, status) {
+      return authCall(
+        "adminSupportTickets",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 20),
+          status: text(status)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดคำร้อง"
+        }
+      );
+    },
+
+    updateSupportTicket(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_SUPPORT_TICKET_UPDATE",
+          "ข้อมูลแก้ไขคำร้องไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "adminUpdateSupportTicket",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังบันทึกการแก้ไขคำร้อง"
+        }
+      );
+    },
+
+    listAuditLogs(page, pageSize) {
+      return authCall(
+        "adminAuditLogs",
+        {
+          page: Number(page || 1),
+          pageSize: Number(pageSize || 50)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดบันทึกตรวจสอบ"
+        }
+      );
+    },
+
+    listAdmins() {
+      return authCall(
+        "adminListAdmins",
+        {},
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดผู้ดูแลระบบ"
+        }
+      );
+    },
+
+    setAdminStatus(email, role, status) {
+      return authCall(
+        "adminSetAdminStatus",
+        {
+          email: validateEmail(email),
+          role: text(role),
+          status: text(status)
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังปรับปรุงสิทธิ์ผู้ดูแล"
+        }
+      );
+    },
+
+    getSettings() {
+      return authCall(
+        "adminGetSettings",
+        {},
+        {
+          loading: true,
+          loadingMessage: "กำลังโหลดการตั้งค่าระบบ"
+        }
+      );
+    },
+
+    updateSetting(settingKey, settingValue) {
+      return authCall(
+        "adminUpdateSettings",
+        {
+          settingKey: text(settingKey),
+          settingValue: String(
+            settingValue === undefined ? "" : settingValue
+          )
+        },
+        {
+          loading: true,
+          loadingMessage: "กำลังบันทึกการตั้งค่า"
+        }
+      );
+    },
+
+    sendNotification(data) {
+      if (!isObject(data)) {
+        throw new FinoraError(
+          "INVALID_NOTIFICATION",
+          "ข้อมูลแจ้งเตือนไม่ถูกต้อง"
+        );
+      }
+
+      return authCall(
+        "adminSendNotification",
+        data,
+        {
+          loading: true,
+          loadingMessage: "กำลังส่งการแจ้งเตือน"
+        }
+      );
+    }
+  };
+
+  const consent = {
+    showTerms(content) {
+      return ui.showDocumentModal({
+        title: "ข้อกำหนดและเงื่อนไขการใช้บริการ FINORA",
+        content: content,
+        agreeText: "ยินยอม",
+        cancelText: "ยกเลิก",
+        warningText: "กรุณาเลื่อนอ่านเนื้อหาจนถึงด้านล่างก่อนยินยอม",
+        requireScrollToBottom: true
+      });
+    },
+
+    showPrivacyNotice(content) {
+      return ui.showDocumentModal({
+        title: "ประกาศความเป็นส่วนตัว",
+        content: content,
+        agreeText: "รับทราบ",
+        cancelText: "ยกเลิก",
+        warningText: "กรุณาเลื่อนอ่านเนื้อหาจนถึงด้านล่างก่อนดำเนินการ",
+        requireScrollToBottom: true
+      });
+    }
+  };
+
+  function initializeGoogleIdentity() {
+    if (!text(CONFIG.GOOGLE_CLIENT_ID)) {
+      emit("finora:google-not-configured", {});
+      return false;
+    }
+
+    if (
+      !window.google ||
+      !window.google.accounts ||
+      !window.google.accounts.id
+    ) {
+      return false;
+    }
+
+    try {
+      window.google.accounts.id.initialize({
+        client_id: text(CONFIG.GOOGLE_CLIENT_ID),
+
+        callback: function (response) {
+          const credential = response && response.credential;
+
+          auth.googleLogin(credential, false).catch(function (error) {
+            ui.toast(normalizeError(error).message, "error");
+          });
+        },
+
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+
+      STATE.googleReady = true;
+      emit("finora:google-ready", {});
+
+      return true;
+
+    } catch (error) {
+      emit("finora:google-error", {
+        message: normalizeError(error).message
+      });
+
+      return false;
+    }
+  }
+
+  function renderGoogleButton(elementOrId, options) {
+    if (
+      !initializeGoogleIdentity() &&
+      !(
+        window.google &&
+        window.google.accounts &&
+        window.google.accounts.id
+      )
+    ) {
+      throw new FinoraError(
+        "GOOGLE_IDENTITY_NOT_READY",
+        "Google Sign-In ยังไม่พร้อม กรุณาตรวจสอบว่าโหลดสคริปต์ Google Identity Services แล้ว"
+      );
+    }
+
+    const element = typeof elementOrId === "string"
+      ? document.getElementById(elementOrId)
+      : elementOrId;
+
+    if (!element) {
+      throw new FinoraError(
+        "GOOGLE_BUTTON_CONTAINER_MISSING",
+        "ไม่พบตำแหน่งแสดงปุ่ม Google Sign-In"
+      );
+    }
+
+    window.google.accounts.id.renderButton(
+      element,
+      Object.assign(
+        {
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "rectangular",
+          width: 280
+        },
+        options || {}
+      )
+    );
+  }
+
+  async function initialize() {
+    if (STATE.initialized) {
+      return;
+    }
+
+    STATE.initialized = true;
+    ui.ensure();
+
+    STATE.rememberMe = session.isRemembered();
+    STATE.isAuthenticated = session.hasSession();
+
+    const url = new URL(window.location.href);
+    const resetToken = url.searchParams.get("token");
+    const view = url.searchParams.get("view");
+
+    if (view === "reset-password" && resetToken) {
+      emit("finora:password-reset-link", {
+        available: true,
+        token: resetToken
+      });
+
+      url.searchParams.delete("token");
+
+      window.history.replaceState(
+        {},
+        document.title,
+        url.pathname +
+          (url.searchParams.toString()
+            ? "?" + url.searchParams.toString()
+            : "") +
+          url.hash
+      );
+    }
+
+    emit("finora:client-ready", {
+      configured: !!text(CONFIG.API_URL),
+      authenticated: STATE.isAuthenticated,
+      user: STATE.user
+    });
+
+    if (
+      window.google &&
+      window.google.accounts &&
+      window.google.accounts.id
+    ) {
+      initializeGoogleIdentity();
+
+    } else {
+      // The Google Identity script may finish loading after this file.
+      const googleScript = document.querySelector(
+        'script[src*="accounts.google.com/gsi/client"]'
+      );
+
+      if (googleScript) {
+        googleScript.addEventListener(
+          "load",
+          initializeGoogleIdentity,
+          { once: true }
+        );
+      }
+    }
+  }
+
+  const FINORA = {
+    version: "2.0.0",
+
+    config: {
+      get() {
+        return {
+          appName: CONFIG.APP_NAME,
+          apiUrlConfigured: !!text(CONFIG.API_URL),
+          googleClientIdConfigured: !!text(CONFIG.GOOGLE_CLIENT_ID),
+          maxImageSizeBytes: Number(CONFIG.MAX_IMAGE_SIZE_BYTES),
+          minAge: Number(CONFIG.MIN_AGE),
+          passwordMinLength: Number(CONFIG.PASSWORD_MIN_LENGTH),
+          passwordMaxLength: Number(CONFIG.PASSWORD_MAX_LENGTH),
+          termsVersion: CONFIG.TERMS_VERSION,
+          privacyVersion: CONFIG.PRIVACY_VERSION
+        };
+      },
+
+      set(name, value) {
+        if (name === "API_URL") {
+          CONFIG.API_URL = text(value);
+        } else if (name === "GOOGLE_CLIENT_ID") {
+          CONFIG.GOOGLE_CLIENT_ID = text(value);
+        } else {
+          throw new FinoraError(
+            "CONFIG_KEY_NOT_ALLOWED",
+            "ไม่อนุญาตให้เปลี่ยนค่าการตั้งค่านี้ระหว่างทำงาน"
+          );
+        }
+      }
+    },
+
+    state: STATE,
+
+    errors: {
+      FinoraError: FinoraError,
+      normalize: normalizeError
+    },
+
+    utils: {
+      text: text,
+      escapeHtml: escapeHtml,
+      normalizeEmail: normalizedEmail,
+      money: money,
+      numberFormat: numberFormat,
+      dateFormat: dateFormat,
+      validEmail: validEmail,
+      validateEmail: validateEmail,
+      validatePhone: validatePhone,
+      validateThaiCitizenId: validateThaiCitizenId,
+      validatePassword: validatePassword,
+      validateRegistration: validateRegistration,
+      calculateAge: calculateAge,
+      readFileAsDataUrl: readFileAsDataUrl
+    },
+
+    ui: ui,
+
+    api: {
+      call: call,
+      callAction: actionCall,
+      callAuthenticated: authCall,
+      ping: publicApi.ping,
+      getPublicConfig: publicApi.getConfig
+    },
+
+    session: session,
+    auth: auth,
+    public: publicApi,
+    profile: profile,
+    dashboard: dashboard,
+    loans: loans,
+    payments: payments,
+    notifications: notifications,
+    support: support,
+    images: images,
+    admin: admin,
+    consent: consent,
+
+    google: {
+      initialize: initializeGoogleIdentity,
+      renderButton: renderGoogleButton,
+
+      async signInCredential(idToken, rememberMe) {
+        return auth.googleLogin(idToken, rememberMe);
+      }
+    },
+
+    async initialize() {
+      return initialize();
+    },
+
+    async checkSession() {
+      return auth.checkSession();
+    },
+
+    async healthCheck() {
+      return publicApi.ping();
+    }
+  };
+
   window.FINORA = FINORA;
 
-  /*
-   * Initialize when the document is ready.
-   */
   if (document.readyState === "loading") {
     document.addEventListener(
       "DOMContentLoaded",
       initialize,
-      {
-        once: true
-      }
+      { once: true }
     );
   } else {
     initialize();
   }
-
 })(window, document);
-
-/**
- * FINORA: เริ่ม LINE Login
- *
- * เรียก Apps Script เพื่อรับ URL เข้าสู่ระบบ
- * ไม่มี Channel Secret อยู่ใน frontend
- */
-function startFinoraLineLogin() {
-  const gasUrl =
-    "https://script.google.com/macros/s/AKfycbwWEJQPg0aOWSUMSiMVi2d-LQ9Z7wGh12lnA3G61W-Q-kmJPUb5E-MxPmuLH05V4MGL5g/exec";
-
-  window.finoraLineLoginCallback = function (loginUrl) {
-    try {
-      // รองรับข้อความ error ที่ส่งจาก Apps Script
-      if (loginUrl && typeof loginUrl === "object" && loginUrl.error) {
-        throw new Error(loginUrl.error);
-      }
-
-      const url = new URL(loginUrl);
-
-      // ป้องกันการ redirect ไปยังโดเมนที่ไม่ใช่ LINE
-      if (
-        url.origin !== "https://access.line.me" ||
-        url.pathname !== "/oauth2/v2.1/authorize"
-      ) {
-        throw new Error("Invalid LINE authorization URL");
-      }
-
-      const state = url.searchParams.get("state");
-
-      if (!state) {
-        throw new Error("Missing LINE state");
-      }
-
-      // บันทึก state ไว้ใน session ของ GitHub Pages
-      sessionStorage.setItem("finora_line_state", state);
-
-      // พาผู้ใช้ไป LINE Login
-      window.location.assign(url.toString());
-
-    } catch (error) {
-      console.error("FINORA LINE Login:", error);
-
-      const errorElement = document.getElementById("lineLoginError");
-
-      if (errorElement) {
-        errorElement.textContent =
-          "ไม่สามารถเริ่มเข้าสู่ระบบด้วย LINE ได้ กรุณาลองใหม่";
-      }
-    };
-  };
-
-  // ป้องกันการเพิ่ม script ซ้ำจากการกดหลายครั้ง
-  const previousScript = document.getElementById("finora-line-start");
-  if (previousScript) {
-    previousScript.remove();
-  }
-
-  const script = document.createElement("script");
-  script.id = "finora-line-start";
-
-  script.src =
-    gasUrl +
-    "?action=lineStart" +
-    "&callback=finoraLineLoginCallback" +
-    "&_=" + Date.now();
-
-  script.onerror = function () {
-    console.error("ไม่สามารถเรียก FINORA LINE Login API ได้");
-
-    const errorElement = document.getElementById("lineLoginError");
-
-    if (errorElement) {
-      errorElement.textContent =
-        "เชื่อมต่อระบบเข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่";
-    }
-  };
-
-  document.head.appendChild(script);
-}
