@@ -3215,8 +3215,7 @@ return result;
 } catch (error) {
 if (error instanceof TypeError) {
 throw new Error(
-"ไม่สามารถอ่านคำตอบจาก API ได้ อาจเกิดจากข้อจำกัด CORS หรือการตั้งค่า Web App " +
-"โปรดตรวจสอบว่า Deploy Apps Script แล้ว และทดลอง API จาก GitHub Pages อีกครั้ง"
+"เกิดข้อผิดพลาดในการทำรายการ กรุณาลองใหม่อีกครั้ง"
 );
 }
 
@@ -3357,11 +3356,10 @@ onClick: closeModal
 }
 
 function showApiError(error, title = "ดำเนินการไม่สำเร็จ") {
-const message = error && error.message
-? error.message
-: String(error || "เกิดข้อผิดพลาด");
+  console.error("[FINORA]", error);
 
-showMessage(title, message, "error");
+  const message = "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+  showMessage(title || "ทำรายการไม่สำเร็จ", message, "error");
 }
 
 $("#modalClose").addEventListener("click", closeModal);
