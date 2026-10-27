@@ -1278,15 +1278,27 @@ background: #fbfcff;
 }
 
 .quick-action-icon {
-display: grid;
-width: 39px;
-height: 39px;
-flex: 0 0 39px;
-place-items: center;
-border-radius: 12px;
-background: var(--primary-light);
-color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 39px;
+  height: 39px;
+  min-width: 39px;
+  flex: 0 0 39px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  line-height: 1;
 }
+
+.quick-action-icon i {
+  display: block;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+  }
 
 .quick-action strong {
 display: block;
