@@ -4523,7 +4523,7 @@ title: "ออกจากระบบ",
 body:
 '<div class="text-center">' +
 '<div class="modal-icon info"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>' +
-'<p style="margin:0;color:#58657a;">คุณต้องการออกจากระบบ FINORA ใช่หรือไม่?</p>' +
+'<p style="margin:0;color:#58657a;">คุณต้องการออกจากระบบใช่หรือไม่?</p>' +
 '</div>',
 buttons: [
 {
@@ -4578,7 +4578,7 @@ loadingText: "กำลังส่งลิงก์รีเซ็ตรหั
 
 showMessage(
 "ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว",
-result.message || "หากอีเมลนี้มีบัญชีอยู่ ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านให้",
+result.message || "ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมล",
 "success"
 );
 
@@ -5579,7 +5579,7 @@ const qrImage = String(payment.qrImageDataUrl || "");
 if (!qrImage.startsWith("data:image/")) {
 showMessage(
 "QR Code ไม่ถูกต้อง",
-"ระบบไม่ได้ส่งรูปภาพ QR Code กลับมา",
+"เกิดข้อผิดพลาดในการส่งข้อมูล",
 "error"
 );
 return;
@@ -5735,14 +5735,14 @@ return;
 const reader = new FileReader();
 reader.onload = () => {
 if (typeof reader.result !== "string") {
-reject(new Error("เบราว์เซอร์อ่านข้อมูลไฟล์ไม่ได้ กรุณาเลือกไฟล์อีกครั้ง"));
+reject(new Error("อ่านข้อมูลไฟล์ไม่ได้ กรุณาเลือกไฟล์อีกครั้ง"));
 return;
 }
 resolve(reader.result);
 };
 reader.onerror = () => {
 const detail = reader.error && reader.error.name ? " (" + reader.error.name + ")" : "";
-reject(new Error("เบราว์เซอร์อ่านไฟล์ไม่สำเร็จ กรุณาลองเลือกรูปใหม่" + detail));
+reject(new Error("อ่านไฟล์ไม่สำเร็จ กรุณาลองเลือกรูปใหม่" + detail));
 };
 reader.onabort = () => reject(new Error("การอ่านไฟล์ถูกยกเลิก กรุณาลองอีกครั้ง"));
 
@@ -5787,7 +5787,7 @@ const canvas = document.createElement("canvas");
 canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
 canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
 const ctx = canvas.getContext("2d", { alpha: false });
-if (!ctx) throw new Error("เบราว์เซอร์ไม่รองรับการแปลงรูป กรุณาลอง Chrome รุ่นล่าสุด");
+if (!ctx) throw new Error("ดำเนินการไม่สำเร็จ");
 ctx.fillStyle = "#ffffff";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -5795,7 +5795,7 @@ ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 for (const quality of qualities) {
 const dataUrl = canvas.toDataURL("image/jpeg", quality);
 if (!dataUrl || !dataUrl.startsWith("data:image/jpeg;base64,")) {
-throw new Error("แปลงรูปสลิปไม่สำเร็จ กรุณาลองบันทึกเป็น JPG แล้วเลือกใหม่");
+throw new Error("ดำเนินการไม่สำเร็จ");
 }
 const base64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
 const estimatedBytes = Math.floor(base64.length * 3 / 4);
@@ -5803,7 +5803,7 @@ if (estimatedBytes <= maxBytes) return dataUrl;
 }
 scale *= 0.82;
 }
-throw new Error("รูปสลิปยังมีขนาดใหญ่เกินไป กรุณาครอปรูปให้เหลือเฉพาะสลิปแล้วลองใหม่");
+throw new Error("ดำเนินการไม่สำเร็จ");
 } finally {
 URL.revokeObjectURL(objectUrl);
 }
