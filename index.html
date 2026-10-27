@@ -1306,10 +1306,11 @@ color: #34425a;
 font-size: 11px;
 }
 
-.quick-action span {
-display: block;
-color: var(--muted);
-font-size: 10px;
+.quick-action > span:not(.quick-action-icon),
+.quick-action > span > span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
 }
 
 .empty-state {
