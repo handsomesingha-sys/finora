@@ -2025,6 +2025,27 @@ transition-duration: 0.01ms !important;
   outline-offset: 2px;
 }
 
+
+/* Temporary maintenance page */
+.maintenance-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at top right, rgba(29,154,231,.12), transparent 42%), #f3f7fd;
+}
+.maintenance-card {
+  width: min(820px, 100%); padding: clamp(22px, 5vw, 42px);
+  border: 1px solid #dce7f6; border-radius: 24px; background: #fff;
+  box-shadow: 0 22px 70px rgba(16,45,101,.09); text-align: center;
+}
+.maintenance-brand { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:24px; color:#173b8f; font-size:25px; font-weight:800; }
+.maintenance-brand .brand-mark { display:inline-flex; }
+.maintenance-image { display:block; width:100%; max-height:330px; object-fit:cover; border-radius:16px; margin:0 auto 24px; }
+.maintenance-heading { margin:0 0 12px; color:#173b8f; font-size:clamp(24px,4vw,34px); line-height:1.35; }
+.maintenance-message { max-width:690px; margin:0 auto; color:#526581; font-size:15px; line-height:1.85; overflow-wrap:anywhere; text-align:left; }
+.maintenance-message img { max-width:100%; height:auto; border-radius:12px; }
+.maintenance-return-time { margin:24px 0 0; padding:13px 16px; border-radius:12px; background:#f2f7ff; color:#31527c; font-size:13px; }
+@media (max-width:520px) { .maintenance-page { padding:12px; align-items:flex-start; } .maintenance-card { padding:22px 16px; border-radius:18px; margin-top:16px; } }
+
 </style>
 </head>
 
@@ -2065,7 +2086,18 @@ CENTER MODAL
 <!-- ==========================================================
 LOGIN
 ========================================================== -->
-<main id="loginView" class="auth-stage">
+<!-- TEMPORARY MAINTENANCE VIEW (shown before Login when system is closed) -->
+<main id="maintenanceView" class="maintenance-page hidden">
+  <section class="maintenance-card">
+    <div class="maintenance-brand"><span class="brand-mark"><i class="fa-solid fa-wallet"></i></span><span>FINORA</span></div>
+    <img id="maintenanceImage" class="maintenance-image hidden" alt="ประกาศปิดปรับปรุงระบบ">
+    <h1 id="maintenanceHeading" class="maintenance-heading">ระบบกำลังปรับปรุงชั่วคราว</h1>
+    <div id="maintenanceMessage" class="maintenance-message"><p>ขออภัยในความไม่สะดวก ระบบอยู่ระหว่างการปรับปรุง กรุณากลับมาใช้งานอีกครั้งภายหลัง</p></div>
+    <p id="maintenanceReturnTime" class="maintenance-return-time">ระบบจะกลับมาเปิดให้บริการตามเวลาที่กำหนด</p>
+  </section>
+</main>
+
+<main id="loginView" class="auth-stage hidden">
 <section class="auth-card">
 <div class="auth-brand-row">
 <div class="brand">
@@ -3082,6 +3114,7 @@ selectedLoan: null,
 paymentQr: null,
 supplemental: { loanId: "", record: null, loan: null, user: null, productTerms: {}, formData: {}, documents: [], signatures: [] },
 supplementalExtraRows: 0,
+maintenanceTimer: null,
 publicConfig: {
 minAge: 20,
 termsVersion: "1.0",
@@ -3449,7 +3482,8 @@ const allViews = [
 "waitingEmailView",
 "forgotPasswordView",
 "resetPasswordView",
-"appView"
+"appView",
+"maintenanceView"
  ];
 
 function showView(viewName) {
@@ -3465,7 +3499,8 @@ signup: "signupView",
 waitingEmail: "waitingEmailView",
 forgotPassword: "forgotPasswordView",
 resetPassword: "resetPasswordView",
-app: "appView"
+app: "appView",
+maintenance: "maintenanceView"
 };
 
 const elementId = viewMap[viewName];
@@ -3481,6 +3516,55 @@ window.scrollTo({
 top: 0,
 behavior: "auto"
 });
+}
+
+function showMaintenanceView(data) {
+const config = data || {};
+const heading = $("#maintenanceHeading");
+const message = $("#maintenanceMessage");
+const image = $("#maintenanceImage");
+const schedule = $("#maintenanceReturnTime");
+heading.textContent = String(config.title || "ระบบกำลังปรับปรุงชั่วคราว");
+const html = String(config.messageHtml || "").trim();
+message.innerHTML = html || "<p>ขออภัยในความไม่สะดวก ระบบอยู่ระหว่างการปรับปรุง กรุณากลับมาใช้งานอีกครั้งภายหลัง</p>";
+const imageUrl = String(config.imageUrl || "").trim();
+if (/^https:\/\/\S+$/i.test(imageUrl)) {
+  image.src = imageUrl;
+  image.alt = String(config.imageAlt || config.title || "ประกาศปิดปรับปรุงระบบ");
+  image.classList.remove("hidden");
+} else {
+  image.removeAttribute("src");
+  image.classList.add("hidden");
+}
+const endAt = String(config.endAt || "").trim();
+if (endAt && !Number.isNaN(new Date(endAt).getTime())) {
+  schedule.textContent = "กำหนดเปิดให้บริการอีกครั้ง: " + new Date(endAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" });
+} else {
+  schedule.textContent = "ระบบจะกลับมาเปิดให้บริการโดยอัตโนมัติเมื่อถึงเวลาที่กำหนด";
+}
+showView("maintenance");
+}
+
+function startMaintenanceMonitor() {
+if (state.maintenanceTimer) return;
+state.maintenanceTimer = window.setInterval(async () => {
+  try {
+    const status = await api("getMaintenanceStatus", {}, { silent: true });
+    if (status.maintenanceActive) {
+      if (state.view !== "maintenance") {
+        showMaintenanceView(status);
+        showLoading(false);
+      }
+      return;
+    }
+    if (state.view === "maintenance") {
+      const restored = await restoreSession();
+      if (!restored) showLoginView();
+    }
+  } catch (error) {
+    // Do not show internal details for transient status-check failures.
+  }
+}, 30000);
 }
 
 function showLoginView() {
@@ -6641,6 +6725,22 @@ showLoginView();
 
 async function initializeApplication() {
 initDateInputs();
+showLoading(true, "กำลังตรวจสอบสถานะระบบ", "กรุณารอสักครู่");
+
+// Check maintenance mode before deep links, session restoration, or showing Login.
+let initialMaintenanceStatus = null;
+try {
+initialMaintenanceStatus = await api("getMaintenanceStatus", {}, { silent: true });
+} catch (error) {
+  // The maintenance endpoint is available after deploying the updated Apps Script.
+}
+startMaintenanceMonitor();
+if (initialMaintenanceStatus && initialMaintenanceStatus.maintenanceActive) {
+showMaintenanceView(initialMaintenanceStatus);
+showLoading(false);
+return;
+}
+showLoading(false);
 
 try {
 const publicConfig = await api("getPublicConfig", {}, {
