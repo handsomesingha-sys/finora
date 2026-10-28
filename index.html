@@ -3589,7 +3589,7 @@ const endAt = String(config.endAt || "").trim();
 if (endAt && !Number.isNaN(new Date(endAt).getTime())) {
   schedule.textContent = "กำหนดเปิดให้บริการอีกครั้ง: " + new Date(endAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" });
 } else {
-  schedule.textContent = "ระบบจะกลับมาเปิดให้บริการโดยอัตโนมัติเมื่อถึงเวลาที่กำหนด";
+  schedule.textContent = "ระบบจะกลับมาใช้บริการได้ในไม่นาน";
 }
 showView("maintenance");
 }
