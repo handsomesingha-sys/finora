@@ -2037,8 +2037,51 @@ transition-duration: 0.01ms !important;
   border: 1px solid #dce7f6; border-radius: 24px; background: #fff;
   box-shadow: 0 22px 70px rgba(16,45,101,.09); text-align: center;
 }
-.maintenance-brand { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:24px; color:#173b8f; font-size:25px; font-weight:800; }
-.maintenance-brand .brand-mark { display:inline-flex; }
+.maintenance-brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 30px;
+  color: #173b8f;
+  font-family: "Inter", "Prompt", sans-serif;
+  font-size: clamp(25px, 5vw, 42px);
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.maintenance-brand .brand-mark {
+  display: grid;
+  width: 78px;
+  height: 78px;
+  flex: 0 0 78px;
+  place-items: center;
+  border-radius: 24px;
+  box-shadow: 0 12px 28px rgba(23, 59, 143, .2);
+}
+
+.maintenance-brand .brand-mark i {
+  font-size: 34px;
+}
+
+.maintenance-brand .maintenance-brand-name {
+  display: block;
+}
+
+@media (max-width: 520px) {
+  .maintenance-brand {
+    gap: 13px;
+    margin-bottom: 26px;
+    font-size: 34px;
+  }
+
+  .maintenance-brand .brand-mark {
+    width: 78px;
+    height: 78px;
+    flex-basis: 78px;
+  }
+}
 .maintenance-image { display:block; width:100%; max-height:330px; object-fit:cover; border-radius:16px; margin:0 auto 24px; }
 .maintenance-heading { margin:0 0 12px; color:#173b8f; font-size:clamp(24px,4vw,34px); line-height:1.35; }
 .maintenance-message { max-width:690px; margin:0 auto; color:#526581; font-size:15px; line-height:1.85; overflow-wrap:anywhere; text-align:left; }
@@ -2089,7 +2132,13 @@ LOGIN
 <!-- TEMPORARY MAINTENANCE VIEW (shown before Login when system is closed) -->
 <main id="maintenanceView" class="maintenance-page hidden">
   <section class="maintenance-card">
-    <div class="maintenance-brand"><span class="brand-mark"><i class="fa-solid fa-wallet"></i></span><span>FINORA</span></div>
+    <div class="maintenance-brand">
+  <span class="brand-mark">
+    <i class="fa-solid fa-wallet"></i>
+  </span>
+  <span class="maintenance-brand-name">FINORA</span>
+    </div>
+    <span>FINORA</span></div>
     <img id="maintenanceImage" class="maintenance-image hidden" alt="ประกาศปิดปรับปรุงระบบ">
     <h1 id="maintenanceHeading" class="maintenance-heading">ระบบกำลังปรับปรุงชั่วคราว</h1>
     <div id="maintenanceMessage" class="maintenance-message"><p>ขออภัยในความไม่สะดวก ระบบอยู่ระหว่างการปรับปรุง กรุณากลับมาใช้งานอีกครั้งภายหลัง</p></div>
